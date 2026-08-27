@@ -1,0 +1,11 @@
+# Project Codex defaults. Ponytail full is the plugin default; caveman ultra is pinned here.
+# Codex also reads AGENTS.md and .codex/skills/ so both stay on without @skill.
+
+[plugins."ponytail@ponytail"]
+enabled = true
+
+[plugins."caveman@caveman"]
+enabled = true
+
+[shell_environment_policy]
+set = { CAVEMAN_DEFAULT_MODE = "ultra", PONYTAIL_DEFAULT_MODE = "full" }

@@ -1,0 +1,73 @@
+* { box-sizing: border-box; }
+:root { color-scheme: dark; }
+body {
+  margin: 0; background: #0b0e14; color: #c9d1d9;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.app { display: flex; flex-direction: column; height: 100vh; }
+header {
+  display: flex; align-items: center; gap: 24px;
+  padding: 8px 16px; border-bottom: 1px solid #1b2029; background: #0e1117;
+}
+header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+
+.sentiment { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+.sentiment > span { color: #8b949e; }
+.meter { display: flex; align-items: center; gap: 6px; }
+.meter label { width: 34px; color: #8b949e; }
+.bar { width: 120px; height: 8px; background: #1b2029; border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; }
+.bar .fear { background: #e05561; }
+.bar .greed { background: #26a67a; }
+
+.grid { display: grid; grid-template-columns: 220px 1fr 320px; gap: 10px; padding: 10px; flex: 1; min-height: 0; }
+.left, .right, .center { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.center { min-width: 0; }
+
+.panel { background: #0e1117; border: 1px solid #1b2029; border-radius: 8px; padding: 10px; overflow: auto; }
+.panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #8b949e; margin: 0 0 8px; }
+
+.up { color: #26a67a; }
+.down { color: #e05561; }
+.muted { color: #6a7280; text-align: center; }
+
+.watchlist { width: 100%; border-collapse: collapse; }
+.watchlist .row { cursor: pointer; }
+.watchlist .row:hover { background: #161b22; }
+.watchlist .row.sel { background: #1f2937; }
+.watchlist td { padding: 5px 6px; }
+.watchlist .tk { font-weight: 600; }
+.watchlist .px { text-align: right; }
+.watchlist td:last-child { text-align: right; }
+
+.chart { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chartbox { flex: 1; min-height: 260px; }
+
+.tape { max-height: 260px; }
+.tape table { width: 100%; border-collapse: collapse; }
+.tape td { padding: 2px 6px; }
+.tape .q, .tape .side { text-align: right; color: #8b949e; }
+
+.ladder { display: flex; flex-direction: column; gap: 1px; }
+.lvl { position: relative; display: flex; justify-content: space-between; padding: 2px 6px; }
+.lvl .fill { position: absolute; top: 0; bottom: 0; right: 0; opacity: .18; }
+.lvl .fill.bid { background: #26a67a; }
+.lvl .fill.ask { background: #e05561; }
+.lvl span { position: relative; z-index: 1; }
+.lvl .q { color: #8b949e; }
+.spread { text-align: center; color: #6a7280; padding: 4px; border-block: 1px dashed #1b2029; margin: 2px 0; }
+
+.ticket .mkt { color: #8b949e; margin-bottom: 8px; }
+.ticket label { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; color: #8b949e; }
+.ticket input { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 6px; border-radius: 6px; font: inherit; }
+.btns { display: flex; gap: 8px; }
+.btns button { flex: 1; padding: 8px; border: 0; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; color: #fff; }
+.btns .buy { background: #26a67a; }
+.btns .sell { background: #e05561; }
+.msg { margin-top: 8px; color: #c9d1d9; }
+
+.pf-top { display: flex; gap: 12px; margin-bottom: 8px; }
+.pf-top label { display: block; color: #8b949e; font-size: 11px; }
+.positions { width: 100%; border-collapse: collapse; }
+.positions th { text-align: left; color: #6a7280; font-weight: 400; padding: 3px 6px; }
+.positions td { padding: 3px 6px; }
