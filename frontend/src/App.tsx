@@ -3,6 +3,7 @@ import { useStore } from "./store";
 import { connectWs } from "./ws";
 import { getPortfolio } from "./api";
 import Watchlist from "./components/Watchlist";
+import Groups from "./components/Groups";
 import Chart from "./components/Chart";
 import DepthLadder from "./components/DepthLadder";
 import Tape from "./components/Tape";
@@ -29,7 +30,7 @@ export default function App() {
         <Sentiment />
       </header>
       <div className="grid">
-        <aside className="left"><Watchlist /></aside>
+        <aside className="left"><Watchlist /><Groups /></aside>
         <main className="center">
           <Chart />
           <Tape />

@@ -8,6 +8,7 @@ import { getCandles } from "../api";
 
 export default function Chart() {
   const selected = useStore((s) => s.selected);
+  const phase = useStore((s) => s.snap?.symbols.find((x) => x.symbol === selected)?.phase);
   const box = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const candle = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -51,7 +52,12 @@ export default function Chart() {
 
   return (
     <div className="panel chart">
-      <h2>{selected}</h2>
+      <h2>
+        {selected}
+        {phase && <span className={`phase ${phase}`} title="what the institutions are doing here">
+          smart money: {phase}
+        </span>}
+      </h2>
       <div ref={box} className="chartbox" />
     </div>
   );

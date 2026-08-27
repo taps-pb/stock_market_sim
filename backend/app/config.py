@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 class Config:
     seed: int = 42
     tick_ms: int = 250          # wall-clock per tick when run live
-    n_traders: int = 60         # 20-100 across the stocks
+    n_traders: int = 200        # retail-heavy crowd; a few big players move it
     trend_window: int = 20      # ticks back used as the "recent trend" reference
     candle_ticks: int = 20      # ticks per OHLCV candle
     order_ttl: int = 8          # ticks a resting order lives before auto-cancel
@@ -33,17 +33,41 @@ class Config:
     buy_threshold: float = 0.15
     sell_threshold: float = 0.15
 
-    # archetype mix (weights, normalized). Order-flow character of the market.
+    # institutional campaign (smart money: accumulate -> markup -> distribute -> markdown).
+    # The edge is passive: accumulate cheap, let RETAIL mark it up, distribute into
+    # their strength, then step aside for the markdown. Chasing your own pump loses.
+    campaign_alloc: float = 0.6   # target inventory = this fraction of capital in the stock
+    mk_start: float = 0.08        # accumulate while price is within this of fair (buy the range)
+    mk_target: float = 0.18       # distribute once retail has pushed price this far above fair
+    md_target: float = 0.10       # markdown ends when price is this far below fair (re-accumulate)
+    accum_rate: float = 0.02      # per-tick chunk as fraction of target
+    distrib_rate: float = 0.03    # offload rate into the crowd
+    short_cap_frac: float = 0.4   # markdown may press net short up to this fraction of target
+    # phase timeouts (ticks) so a campaign always cycles even in a one-sided market
+    accum_timeout: int = 300      # proceed with a partial position if it can't fully load
+    markup_timeout: int = 160     # give up waiting for retail to pump; distribute anyway
+    distribute_timeout: int = 160 # give up waiting for buyers; move to markdown
+    markdown_timeout: int = 200   # stop pressing; re-accumulate
+
+    # archetype mix (weights, normalized). Retail is the crowd; institutions are few
+    # but huge. Tiers are defined in archetypes.TIER for grouping/analytics.
     mix: dict[str, float] = field(default_factory=lambda: {
-        "whale": 0.08,
-        "value": 0.15,
-        "momentum": 0.18,
-        "fomo": 0.22,
-        "weak_hands": 0.15,
-        "swing": 0.08,
+        # smart money (few, huge, market-moving)
+        "institution": 0.05,   # runs accumulate/markup/distribute/markdown campaigns
+        "whale": 0.03,         # opportunistic big value, buys the dips
+        "pension": 0.03,       # slow, passive, very long horizon
+        # informed / professional
+        "value": 0.08,
+        "contrarian": 0.04,
+        "swing": 0.06,
+        "momentum": 0.12,
         "scalper": 0.05,
-        "contrarian": 0.05,
-        "noise": 0.04,
+        # retail crowd (many, small, emotional) — the ones who get trapped
+        "fomo": 0.20,
+        "weak_hands": 0.13,
+        "retail": 0.11,
+        "bagholder": 0.05,
+        "noise": 0.05,
     })
     n_market_makers_per_symbol: int = 1
 

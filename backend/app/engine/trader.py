@@ -36,6 +36,7 @@ class Traits:
     activity: float         # 0..1 probability of acting per tick
     is_market_maker: bool = False
     is_noise: bool = False
+    is_institution: bool = False  # runs a market-moving campaign (see Trader.phase)
 
 
 @dataclass
@@ -50,6 +51,15 @@ class Trader:
     fear: float = 0.0
     greed: float = 0.0
     _bias: float = 0.0               # persistent fair-value estimation error
+    phase: str = "accumulate"        # institutions only: campaign phase
+    phase_ticks: int = 0             # institutions only: ticks spent in current phase
+    campaign_target: float = 0.0     # institutions only: target inventory (shares)
+    buy_qty: int = 0                 # lifetime fills, for the buy-high/sell-low trap metric
+    buy_notional: float = 0.0
+    sell_qty: int = 0
+    sell_notional: float = 0.0
+    buy_rel: float = 0.0             # sum of (price/fair)*qty at fill time (beta-neutral)
+    sell_rel: float = 0.0
 
     # --- emotion -------------------------------------------------------
     def update_emotion(self, q: Quote, cfg) -> None:
@@ -71,6 +81,8 @@ class Trader:
             return self._make_market(q, rng)
         if rng.random() > t.activity:
             return []
+        if t.is_institution:
+            return self._campaign(q, cfg, rng)
         if t.is_noise:
             return self._noise(q, rng)
 
@@ -117,14 +129,67 @@ class Trader:
             return bb * (1 - 0.001 * aggression)
         return ba or q.last                            # join the ask (passive, at touch)
 
+    def _campaign(self, q: Quote, cfg, rng: np.random.Generator) -> list[Order]:
+        """Smart money: accumulate low, mark it up to pull retail in, distribute
+        into the crowd near the top, then let it mark down and re-accumulate.
+        The 'trap' isn't scripted onto retail — it's what happens to traders who
+        chase the price this creates."""
+        F, P = q.fair, q.last
+        inv = self.positions.get(self.focus, 0)
+        T = self.campaign_target
+        short_cap = -cfg.short_cap_frac * T
+        self.phase_ticks += 1
+        ph = self.phase
+        if ph == "accumulate" and (inv >= T or self.phase_ticks > cfg.accum_timeout):
+            ph = "markup"                                    # loaded up cheap (or gave up); now wait
+        elif ph == "markup" and (P >= F * (1 + cfg.mk_target) or self.phase_ticks > cfg.markup_timeout):
+            ph = "distribute"                                # retail pumped it (or gave up); sell
+        elif ph == "distribute" and (inv <= T * 0.10 or self.phase_ticks > cfg.distribute_timeout):
+            ph = "markdown"
+        elif ph == "markdown" and (P <= F * (1 - cfg.md_target) or inv <= short_cap
+                                   or self.phase_ticks > cfg.markdown_timeout):
+            ph = "accumulate"
+        if ph != self.phase:
+            self.phase, self.phase_ticks = ph, 0
+
+        if ph == "accumulate":                               # buy cheap, passively absorb supply
+            if inv >= T or self.cash < P or P > F * (1 + cfg.mk_start):
+                return []
+            qty = min(max(1, int(T * cfg.accum_rate)), int(self.cash / P), max(1, int(T - inv)))
+            return [Order(self.focus, Side.BUY, qty, self._price(Side.BUY, q, 0.45, rng), self.id)]
+        if ph == "markup":                                   # step back and let retail run it
+            if P > F * (1 + cfg.mk_start) or inv >= T or self.cash < P:
+                return []                                    # only a small nudge before it moves
+            qty = max(1, int(T * cfg.accum_rate * 0.5))
+            return [Order(self.focus, Side.BUY, qty, self._price(Side.BUY, q, 0.5, rng), self.id)]
+        if ph == "distribute":                               # offer into the crowd's buying (sell high)
+            if inv <= 0:
+                return []
+            qty = max(1, min(int(T * cfg.distrib_rate), inv))
+            return [Order(self.focus, Side.SELL, qty, self._price(Side.SELL, q, 0.55, rng), self.id)]
+        # markdown: press it down a little, then wait to re-accumulate the panic
+        if inv <= short_cap:
+            return []
+        qty = max(1, min(int(T * cfg.distrib_rate), int(inv - short_cap)))
+        return [Order(self.focus, Side.SELL, qty, self._price(Side.SELL, q, 0.75, rng), self.id)]
+
     def _make_market(self, q: Quote, rng) -> list[Order]:
         mid = q.last if q.last else q.fair
-        spread = mid * 0.002
-        size = max(1, int(self.traits.capital / mid / 200))
-        return [
-            Order(self.focus, Side.BUY, size, mid - spread, self.id),
-            Order(self.focus, Side.SELL, size, mid + spread, self.id),
-        ]
+        if not mid or mid <= 0:
+            return []
+        inv = self.positions.get(self.focus, 0)
+        cap_sh = max(1.0, self.traits.capital * 0.5 / mid)   # inventory limit (notional)
+        skew = max(-1.0, min(1.0, inv / cap_sh))             # +long / -short
+        spread = mid * 0.001
+        center = mid * (1 - 0.0015 * skew)                  # lean quotes to revert toward flat
+        base = max(1, int(self.traits.capital / mid / 300))
+        bid_sz, ask_sz = max(0, int(base * (1 - skew))), max(0, int(base * (1 + skew)))
+        out = []
+        if bid_sz:
+            out.append(Order(self.focus, Side.BUY, bid_sz, center - spread, self.id))
+        if ask_sz:
+            out.append(Order(self.focus, Side.SELL, ask_sz, center + spread, self.id))
+        return out
 
     def _noise(self, q: Quote, rng) -> list[Order]:
         side = Side.BUY if rng.random() < 0.5 else Side.SELL

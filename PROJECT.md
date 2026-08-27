@@ -7,10 +7,17 @@ Status snapshot of what has been built so far. For run instructions see
 
 A trader-driven stock market simulator for fictional stocks. Prices are **not**
 calculated from a formula — they emerge from a continuous double-auction order
-book fed by a population of ~70 simulated traders, each with its own psychology
+book fed by a population of ~200 simulated traders, each with its own psychology
 (capital size, risk tolerance, fear/greed that evolves with the market).
 Fundamentals influence only what each trader is *willing to pay*; the last matched
 trade is the price. The human user is a trader in the same book.
+
+The population is **tiered**: a few huge institutions (smart money) and a large
+retail crowd. Institutions run market-moving **campaigns** — accumulate cheap,
+let retail mark the price up, distribute into that strength near the top, then
+step aside for the markdown — which is how big players move the market and trap
+smaller traders. This is emergent, not scripted onto retail: the crowd simply
+reacts to the price the institutions create.
 
 All fundamentals and prices are simulated. Nothing is real market data.
 
@@ -85,10 +92,25 @@ One `Trader` = a fixed **trait vector** + a mutable **emotional state** + a
 - **decide():** combines a value signal (fair vs price, scaled by skill), a
   momentum signal (recent trend, scaled by herding), greed (chasing — a low-skill
   behavior), and fear (into a panic-exit). Panic selling overrides everything.
-- **Archetypes:** whale, value, momentum, fomo, weak_hands, swing, scalper,
-  contrarian, market_maker, noise. ~70 traders across 6 stocks, mix configurable.
-  Noise traders are guaranteed one per symbol so no stock deadlocks; the market
-  opens with traders already holding so sellers exist from tick one.
+- **Archetypes (14), grouped in tiers** (`archetypes.TIER`):
+  - *institutional* — `institution` (runs campaigns), `whale` (opportunistic big
+    value), `pension` (slow, passive, very long horizon).
+  - *informed* — `value`, `contrarian`, `swing`, `momentum`.
+  - *professional* — `scalper`, `market_maker`.
+  - *retail crowd* — `fomo` (buys tops, holds hoping, panics late), `weak_hands`
+    (hair-trigger panic), `retail`, `bagholder`, `noise`.
+  - ~200 traders across 6 stocks, retail-heavy, mix configurable. Noise is
+    guaranteed one per symbol so no stock deadlocks; the market opens with traders
+    already holding so sellers exist from tick one.
+- **Institutional campaign** (`Trader._campaign`, the market-moving smart money):
+  a four-phase state machine — **accumulate** (buy passively near/below fair),
+  **markup** (step back, let retail run it), **distribute** (offer into the
+  crowd's buying near the top), **markdown** (press it down a little, may go net
+  short, then re-accumulate the panic). Phase transitions are driven by inventory,
+  price-vs-fair, and timeouts, and are surfaced per symbol in the snapshot.
+- **Market maker** quotes both sides with an inventory skew that keeps its book
+  bounded and near-flat, so it supplies liquidity without becoming a directional
+  winner.
 
 ### Fundamentals (`engine/fundamentals.py`)
 Each company has eps / growth / quality; `fair_value()` derives a P/E-anchored
@@ -110,19 +132,25 @@ in the book; order writes are validated for cash and shares (reject → HTTP 400
 
 ### Frontend (`frontend/src/`)
 Live dark-theme trading UI: TradingView lightweight-charts candlesticks + volume,
-watchlist with % change, live order-book depth ladder, time & sales tape, a trade
-ticket (market/limit buy/sell), portfolio with mark-to-market P&L, and a fear/greed
-sentiment meter that visualizes the population mood driving price. WebSocket stream
-for ticks; REST for candles and portfolio.
+watchlist with % change, a **participants** panel (institutions vs the retail
+crowd), a **smart-money phase badge** on the chart (accumulate / markup /
+distribute / markdown, so you can watch the campaign play out), live order-book
+depth ladder, time & sales tape, a trade ticket (market/limit buy/sell), portfolio
+with mark-to-market P&L, and a fear/greed sentiment meter. WebSocket stream for
+ticks; REST for candles and portfolio.
 
 ## Verification
 
-- **11/11 tests green** (`pytest tests -q`).
+- **12/12 tests green** (`pytest tests -q`).
   - Order book: no-cross rest, full/partial fill at resting price, price-time
     priority, cheapest-ask-first, market sweep, cancel, bid<ask invariant.
   - Traders: weak hands panic a small dip while a whale buys it; FOMO chases a
     rally while value stays disciplined; over 1500 ticks the market tracks fair
     value on average with no runaway detachment and every stock trades.
+  - Campaign / trap: institutions run full accumulate→markup→distribute→markdown
+    cycles, and a beta-neutral signature holds — normalizing every fill by the
+    fair value at that instant, institutions buy below fair and sell above it,
+    while retail buys at a higher price/fair than smart money (the trap).
 - **End-to-end runtime verified:** backend :8000 + Vite :5173, live tick stream
   through the proxy, candles served, buy/sell round-trip (spread cost realistic),
   oversell guard → 400, deep limit order rests unfilled. TypeScript builds clean.

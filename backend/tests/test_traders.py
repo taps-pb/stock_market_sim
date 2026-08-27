@@ -2,7 +2,7 @@
 import numpy as np
 
 from app.config import Config, SEED_COMPANIES
-from app.engine.archetypes import _traits
+from app.engine.archetypes import TIER, _traits
 from app.engine.market import Side
 from app.engine.simulation import SimEngine
 from app.engine.trader import Quote, Trader
@@ -71,3 +71,29 @@ def test_market_reverts_toward_fair_value_and_stays_consistent():
             assert bb < ba                                   # book invariant
         assert sum(c["v"] for c in eng.candle_list(s)) > 0   # the stock actually traded
     assert sum(devs) / len(devs) < 0.25                      # market tracks fundamentals on average
+
+
+def test_institutions_run_campaigns_and_trap_retail():
+    eng = SimEngine(Config(), SEED_COMPANIES)
+    phases = set()
+    for _ in range(5000):
+        eng.step()
+        phases.update(t.phase for t in eng.traders if t.traits.is_institution)
+
+    # full accumulate -> markup -> distribute -> markdown cycles ran
+    assert {"accumulate", "markup", "distribute", "markdown"} <= phases
+
+    # beta-neutral trap signature: normalize every fill by the fair value at that
+    # moment. Smart money buys below fair and sells above it; the crowd buys richer.
+    def rel(pred):
+        bq = sum(t.buy_qty for t in eng.traders if pred(t))
+        sq = sum(t.sell_qty for t in eng.traders if pred(t))
+        br = sum(t.buy_rel for t in eng.traders if pred(t))
+        sr = sum(t.sell_rel for t in eng.traders if pred(t))
+        return (br / bq if bq else 0.0, sr / sq if sq else 0.0)
+
+    inst_buy_rel, inst_sell_rel = rel(lambda t: t.traits.is_institution)
+    ret_buy_rel, _ = rel(lambda t: TIER.get(t.archetype) == "retail")
+
+    assert inst_sell_rel > inst_buy_rel   # institutions sell richer than they buy (buy low, sell high)
+    assert ret_buy_rel > inst_buy_rel     # retail buys at a higher price/fair than smart money — the trap

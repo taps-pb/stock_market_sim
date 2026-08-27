@@ -1,11 +1,11 @@
 """SimEngine: the per-tick loop that turns trader psychology into a price series."""
 from __future__ import annotations
 
-from collections import deque
+from collections import Counter, deque
 
 import numpy as np
 
-from .archetypes import build_traders
+from .archetypes import TIER, build_traders
 from .fundamentals import build_companies
 from .market import Candle, Order, Side
 from .orderbook import OrderBook
@@ -78,6 +78,7 @@ class SimEngine:
         return fills
 
     def snapshot(self) -> dict:
+        phases = self._smart_money_phases()
         syms = []
         for s in self.symbols:
             b = self.books[s]
@@ -89,13 +90,25 @@ class SimEngine:
                 "open": round(cur.open, 2) if cur else round(self.last[s], 2),
                 "volume": cur.volume if cur else 0,
                 "depth": b.depth(8),
+                "phase": phases.get(s),  # what the institutions are doing here
             })
         return {
             "tick": self.tick, "symbols": syms,
             "sentiment": self._sentiment(),
+            "groups": self._groups(),
             "trades": list(self.tape)[:30],
             "events": list(self.events)[:10],
         }
+
+    def _smart_money_phases(self) -> dict[str, str]:
+        by_sym: dict[str, list[str]] = {}
+        for t in self.traders:
+            if t.traits.is_institution:
+                by_sym.setdefault(t.focus, []).append(t.phase)
+        return {s: Counter(ph).most_common(1)[0][0] for s, ph in by_sym.items()}
+
+    def _groups(self) -> dict[str, int]:
+        return dict(Counter(TIER.get(t.archetype, "other") for t in self.traders))
 
     def portfolio(self) -> dict:
         u = self.user
@@ -131,6 +144,7 @@ class SimEngine:
     def _apply_fill(self, tr) -> None:
         s, p, q = tr.symbol, tr.price, tr.qty
         self.last[s] = p
+        rel = p / max(self.companies[s].fair_value(), 1e-6)  # price relative to fair, at fill time
         buyer, seller = self.by_id.get(tr.buy_trader_id), self.by_id.get(tr.sell_trader_id)
         if buyer:
             old = buyer.positions.get(s, 0)
@@ -139,11 +153,17 @@ class SimEngine:
                 buyer.entry[s] = (buyer.entry.get(s, p) * max(old, 0) + p * q) / new
             buyer.positions[s] = new
             buyer.cash -= p * q
+            buyer.buy_qty += q
+            buyer.buy_notional += p * q
+            buyer.buy_rel += rel * q
         if seller:
             seller.positions[s] = seller.positions.get(s, 0) - q
             seller.cash += p * q
             if seller.positions[s] <= 0:
                 seller.entry.pop(s, None)
+            seller.sell_qty += q
+            seller.sell_notional += p * q
+            seller.sell_rel += rel * q
         self._candle(s).update(p, q)
         self.tape.appendleft({"tick": self.tick, "symbol": s, "price": round(p, 2),
                               "qty": q, "aggressor": tr.aggressor.value})

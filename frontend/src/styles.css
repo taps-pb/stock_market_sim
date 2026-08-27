@@ -41,7 +41,26 @@ header h1 { font-size: 15px; margin: 0; font-weight: 600; }
 .watchlist td:last-child { text-align: right; }
 
 .chart { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chart h2 { display: flex; align-items: center; gap: 10px; }
 .chartbox { flex: 1; min-height: 260px; }
+
+/* smart-money phase badge */
+.phase { text-transform: none; letter-spacing: 0; font-size: 11px; padding: 2px 8px; border-radius: 999px; color: #0b0e14; font-weight: 600; }
+.phase.accumulate { background: #4c9be8; }   /* buying cheap */
+.phase.markup     { background: #26a67a; }   /* letting it run */
+.phase.distribute { background: #e0a020; }   /* selling to the crowd */
+.phase.markdown   { background: #e05561; }   /* letting it fall */
+
+/* participants */
+.grp { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.glabel { width: 80px; color: #8b949e; font-size: 11px; }
+.gbar { flex: 1; height: 8px; background: #1b2029; border-radius: 4px; overflow: hidden; }
+.gfill { display: block; height: 100%; }
+.gfill.institutional { background: #e0a020; }
+.gfill.informed { background: #4c9be8; }
+.gfill.professional { background: #8b949e; }
+.gfill.retail { background: #26a67a; }
+.gn { width: 28px; text-align: right; color: #c9d1d9; }
 
 .tape { max-height: 260px; }
 .tape table { width: 100%; border-collapse: collapse; }
