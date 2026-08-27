@@ -38,10 +38,13 @@ class SimEngine:
         self.tape: deque = deque(maxlen=100)
         self.events: deque = deque(maxlen=50)
         self.order_reg: dict[int, tuple[str, str, int]] = {}  # id -> (trader, symbol, tick)
+        self.flow = {s: [0, 0] for s in self.symbols}  # per-tick [buy_vol, sell_vol] by aggressor
 
     # --- public --------------------------------------------------------
     def step(self) -> dict:
         self.tick += 1
+        for s in self.symbols:
+            self.flow[s][0] = self.flow[s][1] = 0  # reset per-tick signed volume
         for c in self.companies.values():
             e = c.evolve(self.tick, self.rng, self.cfg)
             if e:
@@ -165,6 +168,7 @@ class SimEngine:
             seller.sell_notional += p * q
             seller.sell_rel += rel * q
         self._candle(s).update(p, q)
+        self.flow[s][0 if tr.aggressor is Side.BUY else 1] += q
         self.tape.appendleft({"tick": self.tick, "symbol": s, "price": round(p, 2),
                               "qty": q, "aggressor": tr.aggressor.value})
 

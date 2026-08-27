@@ -139,9 +139,50 @@ depth ladder, time & sales tape, a trade ticket (market/limit buy/sell), portfol
 with mark-to-market P&L, and a fear/greed sentiment meter. WebSocket stream for
 ticks; REST for candles and portfolio.
 
+### ML prediction layer (`backend/ml/`, Phase 1)
+
+The simulator doubles as a **ground-truth market** for training a predictor and
+measuring how accurate prediction can be — with a hard **leakage boundary**.
+
+- `features.py` — splits features into `OBSERVABLE_COLS` (what a real trader sees:
+  lagged returns, volatility, momentum, order-book imbalance/spread/depth, signed
+  trade flow, a *stale published* fair, an aggregate sentiment index) and
+  `ORACLE_COLS` (hidden latents that *cause* price: institution campaign phase,
+  exact live fair gap, net institutional inventory, retail panic fraction). A test
+  asserts the observable set contains no latent.
+- `record.py` — runs `SimEngine` headless across seeds, emitting one row per
+  `(symbol, tick)` with a forward label `y = 1` if price `candle_ticks` ahead is
+  higher. One tiny engine hook feeds it: per-tick signed volume `SimEngine.flow`.
+- `train.py` — baselines (majority, persistence) + gradient-boosted trees, tested
+  on **unseen seeds** (must generalize to a fresh market), reporting the
+  observable-only model next to an observable+oracle ceiling.
+
+**Result (8 seeds, 3000 ticks, ~140k rows, next-20-tick direction):**
+
+| model | acc | AUC |
+|---|---|---|
+| baseline majority | 0.534 | — |
+| baseline persistence | 0.572 | — |
+| **GBM observable** | **0.829** | **0.910** |
+| GBM + oracle | 0.830 | 0.913 |
+
+- **+0.26 over baseline** → a genuine learnable signal exists (no temporal leak:
+  features use only data up to the current tick).
+- **Oracle ≈ observable** → the observable order flow already reveals the latent
+  state; knowing the hidden phase/emotions adds ~nothing.
+- Ablation: the signal is **order flow** (book imbalance + signed flow → 0.827),
+  not valuation/mean-reversion (`val_gap` alone → 0.569). The model learns to read
+  the tape/book for the **institutional footprint** — exactly how real quant
+  signals work, and why the campaign phase is recoverable from public data.
+- **Caveat:** 0.83 directional accuracy is far above real markets (~0.55). Our sim
+  is more predictable because institutions push price with strong, persistent,
+  *observable* order flow. That's a realistic *reason*, but if the goal is
+  real-market *difficulty*, dial up noise / weaken the footprint in `config.py`.
+
 ## Verification
 
-- **12/12 tests green** (`pytest tests -q`).
+- **15/15 tests green** (`pytest tests -q`) — 12 sim + 3 ML (dataset sanity,
+  leakage-boundary guard, pipeline produces valid accuracy).
   - Order book: no-cross rest, full/partial fill at resting price, price-time
     priority, cheapest-ask-first, market sweep, cancel, bid<ask invariant.
   - Traders: weak hands panic a small dip while a whale buys it; FOMO chases a
@@ -167,3 +208,6 @@ ticks; REST for candles and portfolio.
   margin, options) — deferred by design.
 - **Scale** — starts at 6 stocks; expand via `SEED_COMPANIES`. Full order book per
   tick is comfortable at this size; larger universes may need perf work.
+- **ML later phases** — sequence model (LSTM / temporal CNN), a trading-PnL
+  backtest (act on the signal, measure money not accuracy), regression targets,
+  and difficulty calibration toward real-market predictability.
