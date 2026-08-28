@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from .. import runtime
 from ..engine.market import Side
 from ..engine.simulation import USER_ID
 from ..runtime import engine, hub
@@ -20,7 +21,7 @@ class OrderIn(BaseModel):
 
 @router.get("/api/state")
 def state():
-    return engine.snapshot()
+    return runtime.state  # latest snapshot incl. model signals (kept fresh by the sim loop)
 
 
 @router.get("/api/symbols/{symbol}/candles")
@@ -57,7 +58,7 @@ def place_order(order: OrderIn):
 async def ws(sock: WebSocket):
     await hub.connect(sock)
     try:
-        await sock.send_json(engine.snapshot())  # immediate first paint
+        await sock.send_json(runtime.state)  # immediate first paint (incl. model signals)
         while True:
             await sock.receive_text()  # keepalive; server pushes on its own clock
     except WebSocketDisconnect:

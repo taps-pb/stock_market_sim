@@ -8,10 +8,18 @@ export type Sym = {
   phase: Phase | null;
 };
 export type Trade = { tick: number; symbol: string; price: number; qty: number; aggressor: string };
+export type Signal = { dir: "up" | "down"; prob: number };
+export type Model = {
+  signals: Record<string, Signal>;
+  accuracy: number | null;
+  n: number;
+  horizon: number;
+};
 export type Snapshot = {
   tick: number; symbols: Sym[];
   sentiment: { fear: number; greed: number };
   groups: Record<string, number>;
+  model?: Model;
   trades: Trade[]; events: { tick: number; type: string; symbol: string; surprise: number }[];
 };
 export type Position = { symbol: string; shares: number; avg: number; last: number; value: number; pnl: number };

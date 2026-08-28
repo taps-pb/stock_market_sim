@@ -12,6 +12,7 @@ export default function Watchlist() {
         <tbody>
           {snap.symbols.map((s) => {
             const chg = s.open ? (s.last - s.open) / s.open : 0;
+            const dir = snap.model?.signals?.[s.symbol]?.dir;
             return (
               <tr
                 key={s.symbol}
@@ -19,6 +20,8 @@ export default function Watchlist() {
                 onClick={() => select(s.symbol)}
               >
                 <td className="tk">{s.symbol}</td>
+                <td className={dir === "up" ? "up sig-a" : dir === "down" ? "down sig-a" : "sig-a"}
+                    title="model signal">{dir === "up" ? "▲" : dir === "down" ? "▼" : ""}</td>
                 <td className="px">{s.last.toFixed(2)}</td>
                 <td className={chg >= 0 ? "up" : "down"}>
                   {chg >= 0 ? "+" : ""}{(chg * 100).toFixed(2)}%

@@ -152,25 +152,26 @@ class Trader:
         if ph != self.phase:
             self.phase, self.phase_ticks = ph, 0
 
+        jit = float(rng.uniform(0.4, 1.6))                   # noisy slicing: footprint isn't clean
         if ph == "accumulate":                               # buy cheap, passively absorb supply
             if inv >= T or self.cash < P or P > F * (1 + cfg.mk_start):
                 return []
-            qty = min(max(1, int(T * cfg.accum_rate)), int(self.cash / P), max(1, int(T - inv)))
+            qty = min(max(1, int(T * cfg.accum_rate * jit)), int(self.cash / P), max(1, int(T - inv)))
             return [Order(self.focus, Side.BUY, qty, self._price(Side.BUY, q, 0.45, rng), self.id)]
         if ph == "markup":                                   # step back and let retail run it
             if P > F * (1 + cfg.mk_start) or inv >= T or self.cash < P:
                 return []                                    # only a small nudge before it moves
-            qty = max(1, int(T * cfg.accum_rate * 0.5))
+            qty = max(1, int(T * cfg.accum_rate * 0.5 * jit))
             return [Order(self.focus, Side.BUY, qty, self._price(Side.BUY, q, 0.5, rng), self.id)]
         if ph == "distribute":                               # offer into the crowd's buying (sell high)
             if inv <= 0:
                 return []
-            qty = max(1, min(int(T * cfg.distrib_rate), inv))
+            qty = max(1, min(int(T * cfg.distrib_rate * jit), inv))
             return [Order(self.focus, Side.SELL, qty, self._price(Side.SELL, q, 0.55, rng), self.id)]
         # markdown: press it down a little, then wait to re-accumulate the panic
         if inv <= short_cap:
             return []
-        qty = max(1, min(int(T * cfg.distrib_rate), int(inv - short_cap)))
+        qty = max(1, min(int(T * cfg.distrib_rate * jit), int(inv - short_cap)))
         return [Order(self.focus, Side.SELL, qty, self._price(Side.SELL, q, 0.75, rng), self.id)]
 
     def _make_market(self, q: Quote, rng) -> list[Order]:

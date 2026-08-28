@@ -10,6 +10,7 @@ import Tape from "./components/Tape";
 import TradeTicket from "./components/TradeTicket";
 import PortfolioView from "./components/PortfolioView";
 import Sentiment from "./components/Sentiment";
+import Signal from "./components/Signal";
 
 export default function App() {
   const setSnap = useStore((s) => s.setSnap);
@@ -36,6 +37,7 @@ export default function App() {
           <Tape />
         </main>
         <aside className="right">
+          <Signal />
           <TradeTicket />
           <DepthLadder />
           <PortfolioView />

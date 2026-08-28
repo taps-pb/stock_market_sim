@@ -155,16 +155,20 @@ measuring how accurate prediction can be — with a hard **leakage boundary**.
   higher. One tiny engine hook feeds it: per-tick signed volume `SimEngine.flow`.
 - `train.py` — baselines (majority, persistence) + gradient-boosted trees, tested
   on **unseen seeds** (must generalize to a fresh market), reporting the
-  observable-only model next to an observable+oracle ceiling.
+  observable-only model next to an observable+oracle ceiling. `--save ml/model.pkl`
+  fits on all data and persists a deployable observable-only model.
+- `predict.py` — `Predictor` loads the saved model, keeps per-symbol price
+  buffers, emits a live directional signal + probability each tick, and **scores
+  its own past calls as their horizon matures** (honest live accuracy).
 
 **Result (8 seeds, 3000 ticks, ~140k rows, next-20-tick direction):**
 
 | model | acc | AUC |
 |---|---|---|
-| baseline majority | 0.534 | — |
-| baseline persistence | 0.572 | — |
-| **GBM observable** | **0.829** | **0.910** |
-| GBM + oracle | 0.830 | 0.913 |
+| baseline majority | 0.533 | — |
+| baseline persistence | 0.563 | — |
+| **GBM observable** | **0.814** | **0.898** |
+| GBM + oracle | 0.822 | 0.904 |
 
 - **+0.26 over baseline** → a genuine learnable signal exists (no temporal leak:
   features use only data up to the current tick).
@@ -174,10 +178,25 @@ measuring how accurate prediction can be — with a hard **leakage boundary**.
   not valuation/mean-reversion (`val_gap` alone → 0.569). The model learns to read
   the tape/book for the **institutional footprint** — exactly how real quant
   signals work, and why the campaign phase is recoverable from public data.
-- **Caveat:** 0.83 directional accuracy is far above real markets (~0.55). Our sim
-  is more predictable because institutions push price with strong, persistent,
-  *observable* order flow. That's a realistic *reason*, but if the goal is
-  real-market *difficulty*, dial up noise / weaken the footprint in `config.py`.
+- **Difficulty / realism:** exogenous **news shocks** (`config.news_prob`,
+  `news_notional`) — random market orders that gap a random stock — plus jittered
+  institutional order slicing keep the market from being trivially readable. Even
+  so, accuracy sits at ~0.81, well above real markets (~0.55): our institutions
+  push price with strong, persistent, *observable* order flow that isn't
+  arbitraged away. To make it genuinely hard, raise `news_prob`/`news_notional` or
+  shrink the campaign footprint in `config.py` (a "hard mode" knob).
+
+### Live model in the app (trade on the signal)
+
+`app/runtime.py` loads `ml/model.pkl` at startup (if present) and runs the
+`Predictor` each tick, attaching `model` to the broadcast/`GET /api/state`:
+`{signals: {SYM: {dir, prob}}, accuracy, n, horizon}`. The frontend shows a
+**Model Signal** panel (predicted direction, confidence, suggested BUY/SELL) and
+its **live running accuracy over N calls**, plus a signal arrow per row in the
+watchlist. The user reads the signal and trades it through the existing ticket —
+so earning uses the model but still pays the spread and eats the wrong calls.
+Train/refresh the model with `python -m ml.train --save ml/model.pkl`; without the
+file the app just runs with no signals.
 
 ## Verification
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 
 from fastapi import WebSocket
 
@@ -11,6 +12,16 @@ from .engine.simulation import SimEngine
 
 cfg = Config()
 engine = SimEngine(cfg, SEED_COMPANIES)
+
+# Optional live prediction model (train it with `python -m ml.train --save ml/model.pkl`).
+_MODEL_PATH = Path(__file__).resolve().parents[1] / "ml" / "model.pkl"
+try:
+    from ml.predict import Predictor
+    predictor: "Predictor | None" = Predictor(str(_MODEL_PATH)) if _MODEL_PATH.exists() else None
+except Exception:
+    predictor = None
+
+state: dict = engine.snapshot()  # latest snapshot (+ model signals), served over REST too
 
 
 class Hub:
@@ -38,8 +49,12 @@ hub = Hub()
 
 async def run_loop() -> None:
     """Step the sim on a fixed clock and push each snapshot to all clients."""
+    global state
     dt = cfg.tick_ms / 1000
     while True:
         snap = engine.step()
+        if predictor is not None:
+            snap["model"] = predictor.step(engine)  # {signals, accuracy, n, horizon}
+        state = snap
         await hub.broadcast(snap)
         await asyncio.sleep(dt)

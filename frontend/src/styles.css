@@ -85,6 +85,18 @@ header h1 { font-size: 15px; margin: 0; font-weight: 600; }
 .btns .sell { background: #e05561; }
 .msg { margin-top: 8px; color: #c9d1d9; }
 
+.watchlist .sig-a { text-align: center; width: 16px; }
+
+/* model signal panel */
+.signal .sig { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.signal .arrow { font-size: 30px; line-height: 1; }
+.signal .sig.up .arrow, .signal .sig.up .call { color: #26a67a; }
+.signal .sig.down .arrow, .signal .sig.down .call { color: #e05561; }
+.signal .call { font-size: 15px; font-weight: 700; }
+.signal .conf { color: #8b949e; font-size: 12px; margin-top: 2px; }
+.signal .acc { border-top: 1px solid #1b2029; padding-top: 8px; color: #8b949e; font-size: 12px; }
+.signal .acc b { color: #c9d1d9; }
+
 .pf-top { display: flex; gap: 12px; margin-bottom: 8px; }
 .pf-top label { display: block; color: #8b949e; font-size: 11px; }
 .positions { width: 100%; border-collapse: collapse; }

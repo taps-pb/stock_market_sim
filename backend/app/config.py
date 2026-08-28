@@ -19,6 +19,11 @@ class Config:
     earnings_period: int = 400      # ticks between earnings events
     earnings_surprise: float = 0.06 # stdev of earnings surprise (eps jump)
 
+    # exogenous news shocks — random, unforeseeable market orders that gap price.
+    # These are the irreducible uncertainty that keeps the market realistically hard.
+    news_prob: float = 0.12         # chance per tick that a headline hits some stock
+    news_notional: float = 90_000   # typical size of the news-driven order
+
     # emotion dynamics (fear/greed in 0..1)
     fear_decay: float = 0.88
     greed_decay: float = 0.88

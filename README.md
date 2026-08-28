@@ -26,6 +26,9 @@ Backend (port 8000):
 cd backend
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
+# optional: train the ML model so the app shows live BUY/SELL signals
+python -m ml.record --seeds 8 --ticks 3000
+python -m ml.train --save ml/model.pkl
 uvicorn app.main:app --port 8000
 ```
 

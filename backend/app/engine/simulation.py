@@ -66,9 +66,24 @@ class SimEngine:
             if o.qty > 0 and o.price is not None:
                 self.order_reg[o.id] = (o.trader_id, o.symbol, self.tick)
 
+        self._maybe_news()
+
         for s in self.symbols:
             self.history[s].append(self.last[s])
         return self.snapshot()
+
+    def _maybe_news(self) -> None:
+        """Exogenous headline: a random market order that gaps a random stock.
+        Unforeseeable by design — this is what caps how predictable the market is."""
+        if self.rng.random() >= self.cfg.news_prob:
+            return
+        s = self.symbols[self.rng.integers(0, len(self.symbols))]
+        side = Side.BUY if self.rng.random() < 0.5 else Side.SELL
+        qty = max(1, int(self.cfg.news_notional * float(self.rng.uniform(0.5, 1.6)) / self.last[s]))
+        for tr in self.books[s].add(Order(s, side, qty, None, "NEWS")):  # market order
+            self._apply_fill(tr)
+        self.events.appendleft({"tick": self.tick, "type": "news", "symbol": s,
+                                "surprise": (1 if side is Side.BUY else -1)})
 
     def submit_user_order(self, symbol: str, side: Side, qty: int, price: float | None, trader_id: str = "USER") -> list:
         """Inject a user order into the same book the population trades in."""

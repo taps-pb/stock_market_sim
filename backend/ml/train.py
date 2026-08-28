@@ -86,10 +86,20 @@ def _report(out: dict) -> str:
     return "\n".join(lines)
 
 
+def save_model(df: pd.DataFrame, path: str) -> None:
+    """Fit the observable-only model on all data and persist it for live serving."""
+    import joblib
+    model = HistGradientBoostingClassifier(max_iter=300)
+    model.fit(df[OBSERVABLE_COLS].to_numpy(), df["y"].to_numpy())  # array in => array in at serve (no warning)
+    joblib.dump({"model": model, "cols": OBSERVABLE_COLS}, path)
+    print(f"saved deployable model -> {path}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="ml/data/dataset.csv")
     ap.add_argument("--report", default="ml/report.md")
+    ap.add_argument("--save", default="", help="also fit on all data and save a live model here")
     a = ap.parse_args()
     df = pd.read_csv(a.data)
     out = train_eval(df)
@@ -97,6 +107,8 @@ def main() -> None:
     print(text)
     with open(a.report, "w") as f:
         f.write("# ML prediction report\n\n```\n" + text + "\n```\n")
+    if a.save:
+        save_model(df, a.save)
 
 
 if __name__ == "__main__":
