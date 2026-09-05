@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from itertools import count
+from math import isfinite
 
 TICK = 0.01  # minimum price increment
 
@@ -38,10 +39,16 @@ class Order:
     id: int = field(default_factory=lambda: next(_order_seq))
 
     def __post_init__(self) -> None:
+        if not isinstance(self.side, Side):
+            raise ValueError("invalid order side")
+        if isinstance(self.qty, bool) or not isinstance(self.qty, int) or self.qty <= 0:
+            raise ValueError("order qty must be a positive integer")
         if self.price is not None:
+            if not isfinite(self.price) or not isfinite(self.price / TICK) or self.price <= 0:
+                raise ValueError("order price must be finite and positive")
             self.price = quantize(self.price)
-        if self.qty <= 0:
-            raise ValueError("order qty must be positive")
+            if self.price < TICK:
+                raise ValueError("order price must be at least one tick")
 
 
 @dataclass

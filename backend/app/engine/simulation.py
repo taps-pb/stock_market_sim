@@ -20,6 +20,10 @@ class SimEngine:
         self.rng = np.random.default_rng(cfg.seed)
         self.companies = build_companies(seed_companies)
         self.symbols = list(self.companies)
+        for i, c in enumerate(self.companies.values()):
+            c.earnings_offset = i * cfg.earnings_period // len(self.symbols)
+        self.stressed = False
+        self.fees = 0.0
         self.books = {s: OrderBook(s) for s in self.symbols}
         prices0 = {s: self.companies[s].price0 for s in self.symbols}
         self.traders = build_traders(cfg, self.symbols, prices0, self.rng)
@@ -29,6 +33,13 @@ class SimEngine:
                            focus=self.symbols[0], cash=cfg.user_cash)
         self.traders.append(self.user)
         self.by_id = {t.id: t for t in self.traders}
+        # News trades have a funded counterparty, so cash and shares are conserved.
+        news = Trader("NEWS", "outside", inert, self.symbols[0], cfg.news_capital)
+        for s, px in prices0.items():
+            news.positions[s] = int(cfg.news_capital / 2 / len(self.symbols) / px)
+            news.entry[s] = px
+            news.cash -= news.positions[s] * px
+        self.by_id[news.id] = news
         self.tick = 0
 
         self.last = {s: self.companies[s].price0 for s in self.symbols}
@@ -37,16 +48,24 @@ class SimEngine:
         self._cur: dict[str, Candle | None] = {s: None for s in self.symbols}
         self.tape: deque = deque(maxlen=100)
         self.events: deque = deque(maxlen=50)
-        self.order_reg: dict[int, tuple[str, str, int]] = {}  # id -> (trader, symbol, tick)
+        self.order_reg: dict[int, tuple[Order, int]] = {}
+        self.open_orders: dict[str, dict[int, Order]] = {tid: {} for tid in self.by_id}
         self.flow = {s: [0, 0] for s in self.symbols}  # per-tick [buy_vol, sell_vol] by aggressor
 
     # --- public --------------------------------------------------------
     def step(self) -> dict:
         self.tick += 1
+        switch = self.cfg.stress_exit_prob if self.stressed else self.cfg.stress_enter_prob
+        if self.rng.random() < switch:
+            self.stressed = not self.stressed
+        volatility = self.cfg.stress_vol_multiplier if self.stressed else 1.0
+        common = float(self.rng.normal()) * np.sqrt(self.cfg.market_variance)
+        sectors = {c.sector: 0.0 for c in self.companies.values()}
+        sectors = {s: float(self.rng.normal()) * np.sqrt(self.cfg.sector_variance) for s in sectors}
         for s in self.symbols:
             self.flow[s][0] = self.flow[s][1] = 0  # reset per-tick signed volume
         for c in self.companies.values():
-            e = c.evolve(self.tick, self.rng, self.cfg)
+            e = c.evolve(self.tick, self.rng, self.cfg, common + sectors[c.sector], volatility)
             if e:
                 self.events.appendleft({"tick": self.tick, "type": e[0], "symbol": e[1], "surprise": round(e[2], 3)})
         self._expire_orders()
@@ -61,10 +80,7 @@ class SimEngine:
         self.rng.shuffle(orders)
 
         for o in orders:
-            for tr in self.books[o.symbol].add(o):
-                self._apply_fill(tr)
-            if o.qty > 0 and o.price is not None:
-                self.order_reg[o.id] = (o.trader_id, o.symbol, self.tick)
+            self._submit(o)
 
         self._maybe_news()
 
@@ -80,20 +96,63 @@ class SimEngine:
         s = self.symbols[self.rng.integers(0, len(self.symbols))]
         side = Side.BUY if self.rng.random() < 0.5 else Side.SELL
         qty = max(1, int(self.cfg.news_notional * float(self.rng.uniform(0.5, 1.6)) / self.last[s]))
-        for tr in self.books[s].add(Order(s, side, qty, None, "NEWS")):  # market order
-            self._apply_fill(tr)
+        surprise = float(self.rng.uniform(0.5, 1.5)) * self.cfg.news_surprise * (1 if side is Side.BUY else -1)
+        self.companies[s].eps *= float(np.exp(surprise))
+        self.companies[s].published_eps *= float(np.exp(surprise))
+        self._submit(Order(s, side, qty, None, "NEWS"))
         self.events.appendleft({"tick": self.tick, "type": "news", "symbol": s,
-                                "surprise": (1 if side is Side.BUY else -1)})
+                                "surprise": round(surprise, 4)})
 
     def submit_user_order(self, symbol: str, side: Side, qty: int, price: float | None, trader_id: str = "USER") -> list:
         """Inject a user order into the same book the population trades in."""
-        o = Order(symbol, side, qty, price, trader_id)
-        fills = self.books[symbol].add(o)
+        return self._submit(Order(symbol, side, qty, price, trader_id), strict=True)
+
+    def available_cash(self, trader_id: str) -> float:
+        reserved = sum(o.qty * o.price * (1 + self.cfg.fee_bps / 10_000)
+                       for o in self.open_orders[trader_id].values() if o.side is Side.BUY)
+        return max(0.0, self.by_id[trader_id].cash - reserved)
+
+    def _submit(self, o: Order, strict: bool = False) -> list:
+        """One risk gate for human, bot and news orders, before any book mutation."""
+        if o.symbol not in self.books or o.trader_id not in self.by_id:
+            raise ValueError("unknown symbol or trader")
+        t = self.by_id[o.trader_id]
+        if o.side is Side.BUY:
+            cash = self.available_cash(t.id)
+            if o.price is None:
+                _, cost = self.books[o.symbol].execution_quote(o)
+                allowed = o.qty if cost * (1 + self.cfg.fee_bps / 10_000) <= cash + 1e-8 else 0
+            else:
+                allowed = int((cash + 1e-8) / (o.price * (1 + self.cfg.fee_bps / 10_000)))
+            reason = "insufficient available cash"
+        else:
+            short = (int(t.traits.capital * 0.5 / self.last[o.symbol]) if t.traits.is_market_maker
+                     else int(self.cfg.short_cap_frac * t.campaign_target) if t.traits.is_institution else 0)
+            reserved = sum(r.qty for r in self.open_orders[t.id].values()
+                           if r.symbol == o.symbol and r.side is Side.SELL)
+            allowed = max(0, t.positions.get(o.symbol, 0) + short - reserved)
+            reason = "insufficient available shares"
+        if strict and o.qty > allowed:
+            raise ValueError(reason)
+        o.qty = min(o.qty, allowed)
+        if o.qty <= 0:
+            return []
+        fills = self.books[o.symbol].add(o)
         for tr in fills:
             self._apply_fill(tr)
         if o.qty > 0 and o.price is not None:
-            self.order_reg[o.id] = (trader_id, symbol, self.tick)
+            self.order_reg[o.id] = (o, self.tick)
+            self.open_orders[t.id][o.id] = o
         return fills
+
+    def cancel_user_order(self, order_id: int) -> bool:
+        o = self.open_orders[USER_ID].get(order_id)
+        if o is None or o.qty <= 0:
+            return False
+        cancelled = self.books[o.symbol].cancel(order_id)
+        self.order_reg.pop(order_id, None)
+        self.open_orders[USER_ID].pop(order_id, None)
+        return cancelled
 
     def snapshot(self) -> dict:
         phases = self._smart_money_phases()
@@ -103,7 +162,7 @@ class SimEngine:
             cur = self._cur[s]
             syms.append({
                 "symbol": s, "name": self.companies[s].name, "last": round(self.last[s], 2),
-                "fair": round(self.companies[s].fair_value(), 2),
+                "fair": round(self.companies[s].public_fair(), 2),
                 "bid": b.best_bid(), "ask": b.best_ask(),
                 "open": round(cur.open, 2) if cur else round(self.last[s], 2),
                 "volume": cur.volume if cur else 0,
@@ -142,7 +201,12 @@ class SimEngine:
             positions.append({"symbol": s, "shares": sh, "avg": round(avg, 2),
                               "last": round(last, 2), "value": round(value, 2),
                               "pnl": round((last - avg) * sh, 2)})
-        return {"cash": round(u.cash, 2), "positions": positions,
+        return {"cash": round(u.cash, 2), "available_cash": round(self.available_cash(USER_ID), 2),
+                "fee_bps": self.cfg.fee_bps,
+                "orders": [{"id": o.id, "symbol": o.symbol, "side": o.side.value,
+                            "qty": o.qty, "price": o.price}
+                           for o in self.open_orders[USER_ID].values() if o.qty > 0],
+                "positions": positions,
                 "equity": round(equity, 2), "total": round(u.cash + equity, 2)}
 
     def candle_list(self, symbol: str) -> list[dict]:
@@ -157,27 +221,35 @@ class SimEngine:
         h = self.history[s]
         ref = h[0] if len(h) == h.maxlen else self.last[s]
         b = self.books[s]
-        return Quote(s, self.last[s], ref, self.companies[s].fair_value(), b.best_bid(), b.best_ask())
+        vol = float(np.std(np.diff(np.log(h)))) if len(h) > 2 else 0.0
+        return Quote(s, self.last[s], ref, self.companies[s].fair_value(), b.best_bid(), b.best_ask(), vol)
 
     def _apply_fill(self, tr) -> None:
         s, p, q = tr.symbol, tr.price, tr.qty
         self.last[s] = p
         rel = p / max(self.companies[s].fair_value(), 1e-6)  # price relative to fair, at fill time
-        buyer, seller = self.by_id.get(tr.buy_trader_id), self.by_id.get(tr.sell_trader_id)
+        buyer, seller = self.by_id[tr.buy_trader_id], self.by_id[tr.sell_trader_id]
+        fee = p * q * self.cfg.fee_bps / 10_000
+        self.fees += 2 * fee
         if buyer:
             old = buyer.positions.get(s, 0)
             new = old + q
             if new > 0:
-                buyer.entry[s] = (buyer.entry.get(s, p) * max(old, 0) + p * q) / new
+                buyer.entry[s] = ((buyer.entry.get(s, p) * old + p * q) / new) if old >= 0 else p
+            elif new == 0:
+                buyer.entry.pop(s, None)
             buyer.positions[s] = new
-            buyer.cash -= p * q
+            buyer.cash -= p * q + fee
             buyer.buy_qty += q
             buyer.buy_notional += p * q
             buyer.buy_rel += rel * q
         if seller:
-            seller.positions[s] = seller.positions.get(s, 0) - q
-            seller.cash += p * q
-            if seller.positions[s] <= 0:
+            old = seller.positions.get(s, 0)
+            seller.positions[s] = old - q
+            seller.cash += p * q - fee
+            if seller.positions[s] < 0:
+                seller.entry[s] = ((seller.entry.get(s, p) * -old + p * q) / (q - old)) if old <= 0 else p
+            elif seller.positions[s] == 0:
                 seller.entry.pop(s, None)
             seller.sell_qty += q
             seller.sell_notional += p * q
@@ -199,12 +271,12 @@ class SimEngine:
         return cur
 
     def _expire_orders(self) -> None:
-        for oid, (tid, sym, placed) in list(self.order_reg.items()):
-            t = self.by_id.get(tid)
-            mm = bool(t and t.traits.is_market_maker)
-            if mm or self.tick - placed >= self.cfg.order_ttl:
-                self.books[sym].cancel(oid)
+        for oid, (o, placed) in list(self.order_reg.items()):
+            mm = self.by_id[o.trader_id].traits.is_market_maker
+            if o.qty <= 0 or mm or (o.trader_id != USER_ID and self.tick - placed >= self.cfg.order_ttl):
+                self.books[o.symbol].cancel(oid)
                 del self.order_reg[oid]
+                self.open_orders[o.trader_id].pop(oid, None)
 
     def _sentiment(self) -> dict:
         real = [t for t in self.traders if not t.traits.is_market_maker and t.id != USER_ID]

@@ -5,6 +5,12 @@ export const getCandles = (s: string): Promise<Candle[]> =>
 
 export const getPortfolio = () => fetch("/api/portfolio").then((r) => r.json());
 
+export async function cancelOrder(id: number) {
+  const r = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error((await r.json()).detail ?? "cancel rejected");
+  return r.json();
+}
+
 export async function placeOrder(body: {
   symbol: string; side: "BUY" | "SELL"; qty: number; price?: number | null;
 }) {

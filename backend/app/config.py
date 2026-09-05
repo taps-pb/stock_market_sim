@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+SIM_VERSION = 2  # invalidate training artifacts when market mechanics change
+
 
 @dataclass
 class Config:
@@ -13,16 +15,27 @@ class Config:
     candle_ticks: int = 20      # ticks per OHLCV candle
     order_ttl: int = 8          # ticks a resting order lives before auto-cancel
     user_cash: float = 100_000  # starting cash for the human trader
+    fee_bps: float = 1.0       # per side; collected by the simulated exchange
+    news_capital: float = 20_000_000  # finite outside-investor balance sheet
 
     # fundamentals
     fund_drift: float = 0.001       # per-tick eps random-walk vol
     earnings_period: int = 400      # ticks between earnings events
     earnings_surprise: float = 0.06 # stdev of earnings surprise (eps jump)
+    market_variance: float = 0.35   # shared component of fundamental innovations
+    sector_variance: float = 0.25
+    stress_enter_prob: float = 0.003
+    stress_exit_prob: float = 0.015
+    stress_vol_multiplier: float = 3.0
+    mm_half_spread: float = 0.001
+    mm_vol_spread: float = 0.5
+    mm_liquidity_sensitivity: float = 100.0
 
     # exogenous news shocks — random, unforeseeable market orders that gap price.
     # These are the irreducible uncertainty that keeps the market realistically hard.
     news_prob: float = 0.12         # chance per tick that a headline hits some stock
     news_notional: float = 90_000   # typical size of the news-driven order
+    news_surprise: float = 0.015    # public valuation revision accompanying news
 
     # emotion dynamics (fear/greed in 0..1)
     fear_decay: float = 0.88

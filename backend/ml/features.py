@@ -21,7 +21,7 @@ OBSERVABLE_COLS = [
     "spread_rel", "book_imb", "bid_depth", "ask_depth",
     "flow_imb", "flow_vol",
     "val_gap",              # last / public (stale) fair - 1
-    "sent_fear", "sent_greed",
+    "top_imb", "microprice_gap", "bid_present", "ask_present",
 ]
 
 ORACLE_COLS = [
@@ -29,14 +29,14 @@ ORACLE_COLS = [
     "o_true_gap",          # last / exact live fair - 1  (latent)
     "o_inst_inv",          # net institutional inventory / campaign target
     "o_panic_frac",        # fraction of the symbol's retail in panic (fear > 0.6)
+    "o_sent_fear", "o_sent_greed",  # actual agent emotions are NOT market observations
 ]
 
-META_COLS = ["seed", "tick", "symbol"]
+META_COLS = ["seed", "tick", "symbol", "horizon", "sim_version"]
 
 
 def observable_row(prices: np.ndarray, depth: dict, spread: float | None,
-                   flow: list[int], public_fair: float,
-                   sent: dict) -> dict:
+                   flow: list[int], public_fair: float) -> dict:
     """prices: recent price array, most-recent last, length >= HISTORY."""
     last = float(prices[-1])
     w = prices[-WINDOW:]
@@ -44,11 +44,15 @@ def observable_row(prices: np.ndarray, depth: dict, spread: float | None,
     bid_depth = float(sum(q for _, q in depth.get("bids", [])))
     ask_depth = float(sum(q for _, q in depth.get("asks", [])))
     buy, sell = flow
+    bids, asks = depth.get("bids", []), depth.get("asks", [])
+    bp, bq = bids[0] if bids else (last, 0)
+    ap, aq = asks[0] if asks else (last, 0)
+    micro = (ap * bq + bp * aq) / (bq + aq) if bq and aq else last
     return {
         **{f"ret_{k}": last / float(prices[-1 - k]) - 1 for k in LAGS},
         "logret_1": float(np.log(last / float(prices[-2]))),
         "vol_w": float(logrets.std()) if logrets.size else 0.0,
-        "mom_w": last / float(w.mean()) - 1,
+        "mom_w": last / float(w[0]) - 1,
         "ma_gap": last / float(w.mean()) - 1,
         "hl_range": (float(w.max()) - float(w.min())) / last,
         "spread_rel": (spread / last) if spread else 0.0,
@@ -58,8 +62,9 @@ def observable_row(prices: np.ndarray, depth: dict, spread: float | None,
         "flow_imb": (buy - sell) / (buy + sell + 1),
         "flow_vol": float(buy + sell),
         "val_gap": last / max(public_fair, 1e-6) - 1,
-        "sent_fear": float(sent["fear"]),
-        "sent_greed": float(sent["greed"]),
+        "top_imb": (bq - aq) / (bq + aq + 1),
+        "microprice_gap": micro / last - 1,
+        "bid_present": float(bool(bids)), "ask_present": float(bool(asks)),
     }
 
 
@@ -84,6 +89,8 @@ def oracle_row(engine, symbol: str) -> dict:
             panic += t.fear > 0.6
     dom = max(phases, key=phases.get)  # dominant institutional phase on this symbol
     return {
+        "o_sent_fear": engine._sentiment()["fear"],
+        "o_sent_greed": engine._sentiment()["greed"],
         "o_phase_accumulate": float(dom == "accumulate"),
         "o_phase_markup": float(dom == "markup"),
         "o_phase_distribute": float(dom == "distribute"),

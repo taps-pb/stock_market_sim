@@ -48,11 +48,28 @@ class OrderBook:
     # --- mutation ------------------------------------------------------
     def add(self, order: Order) -> list[Trade]:
         """Match `order` against the book; rest any residual (limit only)."""
+        if order.symbol != self.symbol:
+            raise ValueError("order symbol does not match book")
         book = self._asks if order.side is Side.BUY else self._bids
         trades = self._match(order, book)
         if order.qty > 0 and order.price is not None:
             self._rest(order)
         return trades
+
+    def execution_quote(self, order: Order) -> tuple[int, float]:
+        """Executable quantity and cost, without mutating depth or counting self trades."""
+        book = self._asks if order.side is Side.BUY else self._bids
+        remaining, cost = order.qty, 0.0
+        for price in self._opposite_prices(order, book):
+            if not remaining or not self._crosses(order, price):
+                break
+            for resting in book[price]:
+                if resting.trader_id == order.trader_id:
+                    continue
+                fill = min(remaining, resting.qty)
+                cost += fill * price
+                remaining -= fill
+        return order.qty - remaining, cost
 
     def cancel(self, order_id: int) -> bool:
         loc = self._loc.pop(order_id, None)
@@ -91,6 +108,12 @@ class OrderBook:
             level = book[price]
             while level and order.qty > 0:
                 resting = level[0]
+                # Cancel the older order: wash trades must not print or move price.
+                if resting.trader_id == order.trader_id:
+                    resting.qty = 0
+                    level.popleft()
+                    self._loc.pop(resting.id, None)
+                    continue
                 fill = min(order.qty, resting.qty)
                 buy_id = order.trader_id if order.side is Side.BUY else resting.trader_id
                 sell_id = resting.trader_id if order.side is Side.BUY else order.trader_id

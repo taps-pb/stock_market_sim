@@ -102,3 +102,30 @@ header h1 { font-size: 15px; margin: 0; font-weight: 600; }
 .positions { width: 100%; border-collapse: collapse; }
 .positions th { text-align: left; color: #6a7280; font-weight: 400; padding: 3px 6px; }
 .positions td { padding: 3px 6px; }
+
+.forecast-price { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.forecast-price strong { color: #e6edf3; font-size: 28px; font-weight: 600; }
+.forecast-range { display: flex; flex-direction: column; gap: 5px; background: #161f30; border-left: 3px solid #7399e8; margin: 12px 0; padding: 10px; }
+.forecast-range span, .portfolio-note, .model-note { color: #8b949e; font-size: 11px; }
+.signal .acc > div { margin-bottom: 5px; }
+.signal details { margin-top: 10px; color: #aab6c5; font-size: 11px; }
+.signal summary { cursor: pointer; }
+.orders-title { margin-top: 14px !important; }
+.open-order { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 7px; font-size: 11px; }
+.open-order button { background: #212936; color: #e6edf3; border: 1px solid #455369; border-radius: 4px; padding: 4px 7px; cursor: pointer; }
+button:focus-visible, summary:focus-visible { outline: 2px solid #7399e8; outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .app { height: auto; min-height: 100vh; }
+  .grid { grid-template-columns: 180px minmax(0, 1fr); }
+  .right { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chartbox { min-height: 350px; }
+}
+@media (max-width: 600px) {
+  header { flex-wrap: wrap; gap: 8px; }
+  .sentiment { margin-left: 0; flex-wrap: wrap; }
+  .bar { width: 70px; }
+  .grid, .right { grid-template-columns: minmax(0, 1fr); }
+  .left { order: 2; }
+  .right { order: 3; }
+  .pf-top { flex-wrap: wrap; }
+}

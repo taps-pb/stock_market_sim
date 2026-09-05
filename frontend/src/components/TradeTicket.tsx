@@ -16,7 +16,8 @@ export default function TradeTicket() {
       const price = limit.trim() === "" ? null : Number(limit);
       const res = await placeOrder({ symbol: selected, side, qty, price });
       setPortfolio(res.portfolio);
-      setMsg(res.filled ? `${side} ${res.filled} @ ${res.avg_price}` : `${side} resting (0 filled)`);
+      setMsg(res.filled ? `${side} ${res.filled} @ ${res.avg_price}`
+        : price == null ? "No fill: no matching liquidity" : `${side} resting (0 filled)`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -27,7 +28,7 @@ export default function TradeTicket() {
   return (
     <div className="panel ticket">
       <h2>Trade · {selected}</h2>
-      <div className="mkt">last {sym?.last.toFixed(2) ?? "—"} · fair {sym?.fair.toFixed(2) ?? "—"}</div>
+      <div className="mkt">last {sym?.last.toFixed(2) ?? "—"} · published value {sym?.fair.toFixed(2) ?? "—"}</div>
       <label>qty
         <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, +e.target.value))} />
       </label>

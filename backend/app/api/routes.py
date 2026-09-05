@@ -15,43 +15,47 @@ router = APIRouter()
 class OrderIn(BaseModel):
     symbol: str
     side: Side
-    qty: int = Field(gt=0)
-    price: float | None = Field(default=None, gt=0)  # None = market order
+    qty: int = Field(gt=0, strict=True)
+    price: float | None = Field(default=None, ge=0.01, allow_inf_nan=False, strict=True)
 
 
 @router.get("/api/state")
-def state():
+async def state():
     return runtime.state  # latest snapshot incl. model signals (kept fresh by the sim loop)
 
 
 @router.get("/api/symbols/{symbol}/candles")
-def candles(symbol: str):
+async def candles(symbol: str):
     if symbol not in engine.books:
         raise HTTPException(404, "unknown symbol")
     return engine.candle_list(symbol)
 
 
 @router.get("/api/portfolio")
-def portfolio():
+async def portfolio():
     return engine.portfolio()
 
 
 @router.post("/api/orders")
-def place_order(order: OrderIn):
+async def place_order(order: OrderIn):
     if order.symbol not in engine.books:
         raise HTTPException(404, "unknown symbol")
-    user = engine.user
-    ref = engine.last[order.symbol] if order.price is None else order.price
-    if order.side is Side.BUY and order.qty * ref > user.cash:
-        raise HTTPException(400, "insufficient cash")
-    if order.side is Side.SELL and order.qty > user.positions.get(order.symbol, 0):
-        raise HTTPException(400, "insufficient shares")
-    fills = engine.submit_user_order(order.symbol, order.side, order.qty, order.price, USER_ID)
+    try:
+        fills = engine.submit_user_order(order.symbol, order.side, order.qty, order.price, USER_ID)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return {
         "filled": sum(f.qty for f in fills),
         "avg_price": round(sum(f.price * f.qty for f in fills) / sum(f.qty for f in fills), 2) if fills else None,
         "portfolio": engine.portfolio(),
     }
+
+
+@router.delete("/api/orders/{order_id}")
+async def cancel_order(order_id: int):
+    if not engine.cancel_user_order(order_id):
+        raise HTTPException(404, "open order not found")
+    return engine.portfolio()
 
 
 @router.websocket("/ws")

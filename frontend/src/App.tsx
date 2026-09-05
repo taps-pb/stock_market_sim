@@ -17,11 +17,11 @@ export default function App() {
   const setPortfolio = useStore((s) => s.setPortfolio);
 
   useEffect(() => {
-    connectWs(setSnap);
+    const disconnect = connectWs(setSnap);
     const refresh = () => getPortfolio().then(setPortfolio).catch(() => {});
     refresh();
     const id = setInterval(refresh, 1500);
-    return () => clearInterval(id);
+    return () => { disconnect(); clearInterval(id); };
   }, [setSnap, setPortfolio]);
 
   return (

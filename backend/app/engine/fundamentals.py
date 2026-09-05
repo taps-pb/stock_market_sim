@@ -20,6 +20,7 @@ class Company:
     growth: float
     quality: float  # 0..1 composite of margin/low-debt
     published_eps: float = 0.0  # eps as of the last earnings report (public; stale between reports)
+    earnings_offset: int = 0
 
     def _pe(self) -> float:
         return self.base_pe * (1 + self.growth) * (0.5 + 0.5 * self.quality)
@@ -32,10 +33,13 @@ class Company:
         """What the public could compute from the last published report (stale)."""
         return max(0.5, self.published_eps * self._pe())
 
-    def evolve(self, tick: int, rng: np.random.Generator, cfg) -> tuple | None:
+    def evolve(self, tick: int, rng: np.random.Generator, cfg,
+               shock: float = 0.0, volatility: float = 1.0) -> tuple | None:
         """Drift eps each tick; fire an earnings surprise on the schedule."""
-        self.eps *= 1 + rng.normal(0, cfg.fund_drift)
-        if tick > 0 and tick % cfg.earnings_period == 0:
+        idio = np.sqrt(max(0.0, 1 - cfg.market_variance - cfg.sector_variance)) * rng.normal()
+        sigma = cfg.fund_drift * volatility
+        self.eps = max(0.05, self.eps * float(np.exp(sigma * (shock + idio) - 0.5 * sigma ** 2)))
+        if tick > 0 and (tick + self.earnings_offset) % cfg.earnings_period == 0:
             surprise = float(rng.normal(0, cfg.earnings_surprise))
             self.eps = max(0.05, self.eps * (1 + surprise))
             self.published_eps = self.eps  # the report goes public

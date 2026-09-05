@@ -1,232 +1,104 @@
-# PROJECT.md — Stock Market Simulator
+# Project context
 
-Status snapshot of what has been built so far. For run instructions see
-[README.md](README.md); for the original design see the approved plan.
+The project is a fictional, trader-driven market and an AI price-forecasting
+sandbox. Run instructions are in [README.md](README.md); measured model results
+are in [backend/ml/report.md](backend/ml/report.md).
 
-## What this is
+## Current architecture
 
-A trader-driven stock market simulator for fictional stocks. Prices are **not**
-calculated from a formula — they emerge from a continuous double-auction order
-book fed by a population of ~200 simulated traders, each with its own psychology
-(capital size, risk tolerance, fear/greed that evolves with the market).
-Fundamentals influence only what each trader is *willing to pay*; the last matched
-trade is the price. The human user is a trader in the same book.
+FastAPI owns one `SimEngine` and one optional `Predictor`. Each tick evolves
+fundamentals, expires bot orders, updates trader emotions, collects and shuffles
+orders, matches them, applies fills, processes news, then broadcasts a snapshot.
+The React app receives snapshots over WebSocket and reads candles/portfolio via
+REST. Routes that touch the engine run on the same event loop as simulation
+steps, without yielding during mutations.
 
-The population is **tiered**: a few huge institutions (smart money) and a large
-retail crowd. Institutions run market-moving **campaigns** — accumulate cheap,
-let retail mark the price up, distribute into that strength near the top, then
-step aside for the markdown — which is how big players move the market and trap
-smaller traders. This is emergent, not scripted onto retail: the crowd simply
-reacts to the price the institutions create.
+All trade entry paths pass through `SimEngine._submit`. It reserves outstanding
+buy commitments across symbols and sell commitments per symbol, clips bot
+orders to their resources, and rejects unaffordable human orders before book
+mutation. Market-buy affordability uses a non-mutating sweep quote, including
+fees. Self-crossing orders cancel the older resting order without a trade print.
 
-All fundamentals and prices are simulated. Nothing is real market data.
+The exchange collects fees. News has its own funded balance sheet, included in
+`engine.by_id`, but does not participate in trader decision loops. Institutions
+and market makers may short up to configured capacity; ordinary traders and the
+human may not. Human limit orders are good until cancelled; bot orders expire.
+Open orders and available cash are exposed in the portfolio.
 
-## Architecture
+Fundamental innovations combine independent, market, and sector components.
+A persistent calm/stress state changes their volatility. Earnings are staggered
+across companies. News changes public valuation and sends a funded market order.
+Prices still change only through matched trades. Market makers react to observed
+return volatility by widening spreads and reducing size.
 
-```
-fundamentals (eps, growth, quality)  --drift + earnings events-->  fair value
-        |                                                              |
-        v                                                              v
-   each TRADER reads: last price, recent trend, fair value, own P&L,
-                      own emotional state (fear/greed)  -->  LIMIT order
-        |
-        v
-   ORDER BOOK (price-time priority) --match--> trades --> LAST PRICE
-        |
-        v
-   trades feed back into every trader's fear/greed  (the loop that makes
-   panics and bubbles self-reinforce);  OHLCV --> WebSocket --> React chart
-```
+## Forecasting pipeline
 
-The feedback loop — trades reshaping fear/greed, which reshapes the next orders —
-is what produces cascades and bubbles instead of a smooth curve.
+`ml.record` emits one row per symbol/tick after a 60-tick warmup. A row carries
+its simulator version, forecast horizon, causal observable features, separately
+named oracle features, actual future price/return, and executable quotes for
+next-tick entry and horizon exit. Missing quotes remain missing; labels use the
+exact tick horizon and never substitute the next available price.
 
-## Repository layout
+Observable features include lagged returns, volatility, momentum, book and
+top-level imbalance, microprice, quote availability, signed flow, and published
+valuation. Actual agent fear/greed, campaign phase, institutional inventory and
+live intrinsic value belong only to the oracle comparison. Frontend sentiment
+and phase badges remain educational access to simulator internals.
 
-```
-backend/
-  app/
-    config.py            # ALL calibration knobs + SEED_COMPANIES
-    main.py              # FastAPI app; runs the sim loop in the background
-    runtime.py           # process singletons: SimEngine + WebSocket hub
-    engine/
-      market.py          # Order, Trade, Candle, Side; tick quantization
-      orderbook.py       # continuous double-auction, price-time priority
-      fundamentals.py    # Company, drift, earnings events, fair_value()
-      trader.py          # Trader: traits + emotional state + decide()
-      archetypes.py      # preset trait vectors + population builder
-      simulation.py      # SimEngine: per-tick loop, fills, candles, snapshot
-    api/
-      routes.py          # REST (/api/state, /candles, /portfolio, /orders) + /ws
-  tests/
-    test_orderbook.py    # matching-engine correctness
-    test_traders.py      # trader psychology + market-level sanity
-  requirements.txt
-frontend/                # Vite + React + TypeScript
-  src/
-    store.ts             # zustand: snapshot + selected symbol + portfolio
-    ws.ts / api.ts       # WebSocket stream + REST client
-    App.tsx, main.tsx
-    components/          # Watchlist, Chart, DepthLadder, Tape,
-                        #   TradeTicket, PortfolioView, Sentiment
-```
+`ml.train` uses complete seeds as independent markets. The highest two of the
+standard eight seeds are test markets; seed six calibrates intervals; seeds
+one through five fit the models. Random early-stopping splits are disabled.
+Three gradient-boosted quantile regressors estimate the median and 10th/90th
+percentiles of forward returns. A nonnegative residual adjustment, fitted on
+calibration observations spaced by the horizon, widens the interval. A separate
+classifier estimates up versus non-up probability. The classifier probabilities
+are not calibrated probabilities of profit.
 
-## Components built
+The unchanged-price baseline, direction baselines, interval coverage, and
+one-share long-only quote replay are reported on untouched test seeds. The replay
+enters at the next recorded ask, exits at or after the horizon when a bid is
+available, and pays both fees. It prevents overlapping positions per symbol and
+reports remaining open positions separately. It does not model market impact,
+large order capacity, or portfolio-level returns.
 
-### Order book (`engine/orderbook.py`)
-Two `SortedDict[price] -> deque[Order]` sides. Best bid = last key, best ask =
-first key. Matching: buys take cheapest asks first, sells hit highest bids first,
-FIFO within a price level; trades execute at the resting (passive) price. Supports
-limit + market orders, partial fills, cancellation, and a depth ladder for the UI.
+The saved artifact retains its feature schema, simulator version, horizon,
+training/calibration/test seeds and measured performance. It is the evaluated
+model, without a subsequent refit on held-out markets. Incompatible old artifacts
+are rejected and logged. `Predictor` batches all symbols, uses the same feature
+and interval code as evaluation, and scores exact-horizon outcomes. Duplicate
+ticks do not double count; missing ticks reset history and pending evaluations.
 
-### Traders (`engine/trader.py`, `engine/archetypes.py`) — the centerpiece
-One `Trader` = a fixed **trait vector** + a mutable **emotional state** + a
-`decide()` function. Archetypes are just preset trait vectors, so adding a new
-"common trader type" is one row in `_PRESETS`.
+## Interface
 
-- **Traits:** capital, risk_tolerance, panic_threshold, fomo_sensitivity,
-  conviction, herding, skill, horizon, loss_aversion, activity.
-- **Emotional state (evolves each tick):** fear, greed, plus position / entry
-  price / unrealized P&L. This makes "weak hands sell on a small dip" emergent and
-  path-dependent, not scripted.
-- **decide():** combines a value signal (fair vs price, scaled by skill), a
-  momentum signal (recent trend, scaled by herding), greed (chasing — a low-skill
-  behavior), and fear (into a panic-exit). Panic selling overrides everything.
-- **Archetypes (14), grouped in tiers** (`archetypes.TIER`):
-  - *institutional* — `institution` (runs campaigns), `whale` (opportunistic big
-    value), `pension` (slow, passive, very long horizon).
-  - *informed* — `value`, `contrarian`, `swing`, `momentum`.
-  - *professional* — `scalper`, `market_maker`.
-  - *retail crowd* — `fomo` (buys tops, holds hoping, panics late), `weak_hands`
-    (hair-trigger panic), `retail`, `bagholder`, `noise`.
-  - ~200 traders across 6 stocks, retail-heavy, mix configurable. Noise is
-    guaranteed one per symbol so no stock deadlocks; the market opens with traders
-    already holding so sellers exist from tick one.
-- **Institutional campaign** (`Trader._campaign`, the market-moving smart money):
-  a four-phase state machine — **accumulate** (buy passively near/below fair),
-  **markup** (step back, let retail run it), **distribute** (offer into the
-  crowd's buying near the top), **markdown** (press it down a little, may go net
-  short, then re-accumulate the panic). Phase transitions are driven by inventory,
-  price-vs-fair, and timeouts, and are surfaced per symbol in the snapshot.
-- **Market maker** quotes both sides with an inventory skew that keeps its book
-  bounded and near-flat, so it supplies liquidity without becoming a directional
-  winner.
+The forecast panel shows median target price, expected median change, nominal
+80% interval, estimated probability of a higher close, and live direction,
+price-error, baseline-error and coverage metrics. Chart price lines show the
+forecast median and bounds. The portfolio exposes available cash, fees,
+outstanding orders, and cancellation. Layout adapts to narrow screens.
 
-### Fundamentals (`engine/fundamentals.py`)
-Each company has eps / growth / quality; `fair_value()` derives a P/E-anchored
-value calibrated to open at the seed price. Eps drifts each tick and takes a
-discrete surprise jump on the earnings schedule (surfaced as an event).
+WebSocket subscriptions have explicit cleanup, including pending reconnects,
+so React Strict Mode does not leave duplicate connections running.
 
-### Simulation loop (`engine/simulation.py`)
-Per tick: evolve fundamentals → expire stale orders (market makers re-quote every
-tick) → update every trader's emotion → collect and shuffle orders → match → apply
-fills to positions/cash/P&L → roll OHLCV candles → build a snapshot. Exposes
-`submit_user_order`, `portfolio()`, `candle_list()`, and a `snapshot()` with per-
-symbol quotes + depth, the fear/greed sentiment, recent trades, and events.
+## Verification and limits
 
-### Backend API (`api/routes.py`, `main.py`, `runtime.py`)
-FastAPI runs the sim on a fixed clock in a background task and broadcasts each
-snapshot over WebSocket. REST: `GET /api/state`, `GET /api/symbols/{s}/candles`,
-`GET /api/portfolio`, `POST /api/orders`. The user is a real (activity-0) trader
-in the book; order writes are validated for cash and shares (reject → HTTP 400).
+Automated checks cover matching, psychology, campaign behavior, finite account
+balances and conservation, reservations and sweep affordability, self-trade
+prevention, volatility-sensitive liquidity, causal labels, feature parity,
+disjoint evaluation, live forecast maturity, and execution costs/illiquidity.
+The frontend has a runnable connection-lifecycle check and a TypeScript/Vite
+production build.
 
-### Frontend (`frontend/src/`)
-Live dark-theme trading UI: TradingView lightweight-charts candlesticks + volume,
-watchlist with % change, a **participants** panel (institutions vs the retail
-crowd), a **smart-money phase badge** on the chart (accumulate / markup /
-distribute / markdown, so you can watch the campaign play out), live order-book
-depth ladder, time & sales tape, a trade ticket (market/limit buy/sell), portfolio
-with mark-to-market P&L, and a fear/greed sentiment meter. WebSocket stream for
-ticks; REST for candles and portfolio.
+The current update passed 20 backend tests, the frontend lifecycle check and
+production build, plus a localhost check of proxied REST/WebSocket forecasts,
+market fills, cash-limit rejection, candle reads and order cancellation.
 
-### ML prediction layer (`backend/ml/`, Phase 1)
+The market remains easier to predict than a demonstrated real-market trading
+problem: campaigns and relatively simple agents leave persistent public order
+flow. Current benchmarks establish simulator performance only. Overlapping test
+labels and cross-symbol dependencies mean the number of rows is not the number
+of independent observations; nominal interval coverage can drift in new regimes.
 
-The simulator doubles as a **ground-truth market** for training a predictor and
-measuring how accurate prediction can be — with a hard **leakage boundary**.
-
-- `features.py` — splits features into `OBSERVABLE_COLS` (what a real trader sees:
-  lagged returns, volatility, momentum, order-book imbalance/spread/depth, signed
-  trade flow, a *stale published* fair, an aggregate sentiment index) and
-  `ORACLE_COLS` (hidden latents that *cause* price: institution campaign phase,
-  exact live fair gap, net institutional inventory, retail panic fraction). A test
-  asserts the observable set contains no latent.
-- `record.py` — runs `SimEngine` headless across seeds, emitting one row per
-  `(symbol, tick)` with a forward label `y = 1` if price `candle_ticks` ahead is
-  higher. One tiny engine hook feeds it: per-tick signed volume `SimEngine.flow`.
-- `train.py` — baselines (majority, persistence) + gradient-boosted trees, tested
-  on **unseen seeds** (must generalize to a fresh market), reporting the
-  observable-only model next to an observable+oracle ceiling. `--save ml/model.pkl`
-  fits on all data and persists a deployable observable-only model.
-- `predict.py` — `Predictor` loads the saved model, keeps per-symbol price
-  buffers, emits a live directional signal + probability each tick, and **scores
-  its own past calls as their horizon matures** (honest live accuracy).
-
-**Result (8 seeds, 3000 ticks, ~140k rows, next-20-tick direction):**
-
-| model | acc | AUC |
-|---|---|---|
-| baseline majority | 0.533 | — |
-| baseline persistence | 0.563 | — |
-| **GBM observable** | **0.814** | **0.898** |
-| GBM + oracle | 0.822 | 0.904 |
-
-- **+0.26 over baseline** → a genuine learnable signal exists (no temporal leak:
-  features use only data up to the current tick).
-- **Oracle ≈ observable** → the observable order flow already reveals the latent
-  state; knowing the hidden phase/emotions adds ~nothing.
-- Ablation: the signal is **order flow** (book imbalance + signed flow → 0.827),
-  not valuation/mean-reversion (`val_gap` alone → 0.569). The model learns to read
-  the tape/book for the **institutional footprint** — exactly how real quant
-  signals work, and why the campaign phase is recoverable from public data.
-- **Difficulty / realism:** exogenous **news shocks** (`config.news_prob`,
-  `news_notional`) — random market orders that gap a random stock — plus jittered
-  institutional order slicing keep the market from being trivially readable. Even
-  so, accuracy sits at ~0.81, well above real markets (~0.55): our institutions
-  push price with strong, persistent, *observable* order flow that isn't
-  arbitraged away. To make it genuinely hard, raise `news_prob`/`news_notional` or
-  shrink the campaign footprint in `config.py` (a "hard mode" knob).
-
-### Live model in the app (trade on the signal)
-
-`app/runtime.py` loads `ml/model.pkl` at startup (if present) and runs the
-`Predictor` each tick, attaching `model` to the broadcast/`GET /api/state`:
-`{signals: {SYM: {dir, prob}}, accuracy, n, horizon}`. The frontend shows a
-**Model Signal** panel (predicted direction, confidence, suggested BUY/SELL) and
-its **live running accuracy over N calls**, plus a signal arrow per row in the
-watchlist. The user reads the signal and trades it through the existing ticket —
-so earning uses the model but still pays the spread and eats the wrong calls.
-Train/refresh the model with `python -m ml.train --save ml/model.pkl`; without the
-file the app just runs with no signals.
-
-## Verification
-
-- **15/15 tests green** (`pytest tests -q`) — 12 sim + 3 ML (dataset sanity,
-  leakage-boundary guard, pipeline produces valid accuracy).
-  - Order book: no-cross rest, full/partial fill at resting price, price-time
-    priority, cheapest-ask-first, market sweep, cancel, bid<ask invariant.
-  - Traders: weak hands panic a small dip while a whale buys it; FOMO chases a
-    rally while value stays disciplined; over 1500 ticks the market tracks fair
-    value on average with no runaway detachment and every stock trades.
-  - Campaign / trap: institutions run full accumulate→markup→distribute→markdown
-    cycles, and a beta-neutral signature holds — normalizing every fill by the
-    fair value at that instant, institutions buy below fair and sell above it,
-    while retail buys at a higher price/fair than smart money (the trap).
-- **End-to-end runtime verified:** backend :8000 + Vite :5173, live tick stream
-  through the proxy, candles served, buy/sell round-trip (spread cost realistic),
-  oversell guard → 400, deep limit order rests unfilled. TypeScript builds clean.
-
-## Not built yet / next steps
-
-- **Non-earnings news events** — headline shocks that jolt sentiment/fundamentals
-  beyond the scheduled earnings surprises.
-- **UI screenshot check** — no headless browser installed; only the data path was
-  verified, not a rendered-pixels check.
-- **Persistence** — in-memory only; a restart resets the market (SQLite/Postgres
-  when history or portfolio must survive restarts).
-- **Auth / multi-user**, and instruments beyond spot limit/market (shorting,
-  margin, options) — deferred by design.
-- **Scale** — starts at 6 stocks; expand via `SEED_COMPANIES`. Full order book per
-  tick is comfortable at this size; larger universes may need perf work.
-- **ML later phases** — sequence model (LSTM / temporal CNN), a trading-PnL
-  backtest (act on the signal, measure money not accuracy), regression targets,
-  and difficulty calibration toward real-market predictability.
+Remaining work includes calibration against real market stylized facts, richer
+competing strategies and information delays, margin/borrow accounting, larger
+order execution replay, persistence, and multi-user isolation. No browser
+connection was available for a rendered UI check during this update.

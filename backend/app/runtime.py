@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from fastapi import WebSocket
@@ -19,6 +20,7 @@ try:
     from ml.predict import Predictor
     predictor: "Predictor | None" = Predictor(str(_MODEL_PATH)) if _MODEL_PATH.exists() else None
 except Exception:
+    logging.getLogger(__name__).exception("Price model could not be loaded; regenerate data and retrain")
     predictor = None
 
 state: dict = engine.snapshot()  # latest snapshot (+ model signals), served over REST too

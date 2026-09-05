@@ -20,6 +20,7 @@ class Quote:
     fair: float         # true fair value; trader distorts it by its own skill
     best_bid: float | None
     best_ask: float | None
+    volatility: float = 0.0  # observed rolling log-return volatility
 
 
 @dataclass
@@ -78,8 +79,8 @@ class Trader:
     def decide(self, q: Quote, cfg, rng: np.random.Generator) -> list[Order]:
         t = self.traits
         if t.is_market_maker:
-            return self._make_market(q, rng)
-        if rng.random() > t.activity:
+            return self._make_market(q, cfg)
+        if t.activity <= 0 or rng.random() > t.activity:
             return []
         if t.is_institution:
             return self._campaign(q, cfg, rng)
@@ -174,20 +175,21 @@ class Trader:
         qty = max(1, min(int(T * cfg.distrib_rate * jit), int(inv - short_cap)))
         return [Order(self.focus, Side.SELL, qty, self._price(Side.SELL, q, 0.75, rng), self.id)]
 
-    def _make_market(self, q: Quote, rng) -> list[Order]:
+    def _make_market(self, q: Quote, cfg) -> list[Order]:
         mid = q.last if q.last else q.fair
         if not mid or mid <= 0:
             return []
         inv = self.positions.get(self.focus, 0)
         cap_sh = max(1.0, self.traits.capital * 0.5 / mid)   # inventory limit (notional)
         skew = max(-1.0, min(1.0, inv / cap_sh))             # +long / -short
-        spread = mid * 0.001
+        spread = max(0.01, mid * (cfg.mm_half_spread + cfg.mm_vol_spread * q.volatility))
         center = mid * (1 - 0.0015 * skew)                  # lean quotes to revert toward flat
-        base = max(1, int(self.traits.capital / mid / 300))
+        base = max(1, int(self.traits.capital / mid / 300
+                          / (1 + cfg.mm_liquidity_sensitivity * q.volatility)))
         bid_sz, ask_sz = max(0, int(base * (1 - skew))), max(0, int(base * (1 + skew)))
         out = []
         if bid_sz:
-            out.append(Order(self.focus, Side.BUY, bid_sz, center - spread, self.id))
+            out.append(Order(self.focus, Side.BUY, bid_sz, max(0.01, center - spread), self.id))
         if ask_sz:
             out.append(Order(self.focus, Side.SELL, ask_sz, center + spread, self.id))
         return out
