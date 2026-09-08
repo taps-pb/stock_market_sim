@@ -37,6 +37,7 @@ class Order:
     price: float | None  # None = market order (take whatever the book offers)
     trader_id: str
     id: int = field(default_factory=lambda: next(_order_seq))
+    ioc: bool = False  # immediate-or-cancel: never rest unfilled shares
 
     def __post_init__(self) -> None:
         if not isinstance(self.side, Side):

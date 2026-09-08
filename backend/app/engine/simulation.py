@@ -51,9 +51,11 @@ class SimEngine:
         self.order_reg: dict[int, tuple[Order, int]] = {}
         self.open_orders: dict[str, dict[int, Order]] = {tid: {} for tid in self.by_id}
         self.flow = {s: [0, 0] for s in self.symbols}  # per-tick [buy_vol, sell_vol] by aggressor
+        self.volumes = {s: 0 for s in self.symbols}
+        self.executions: dict[str, list[dict]] = {USER_ID: []}  # observed funded accounts only
 
     # --- public --------------------------------------------------------
-    def step(self) -> dict:
+    def step(self, external_orders: list[Order] = ()) -> dict:
         self.tick += 1
         switch = self.cfg.stress_exit_prob if self.stressed else self.cfg.stress_enter_prob
         if self.rng.random() < switch:
@@ -64,6 +66,7 @@ class SimEngine:
         sectors = {s: float(self.rng.normal()) * np.sqrt(self.cfg.sector_variance) for s in sectors}
         for s in self.symbols:
             self.flow[s][0] = self.flow[s][1] = 0  # reset per-tick signed volume
+            self._candle(s)  # keep zero-volume intervals and the previous close
         for c in self.companies.values():
             e = c.evolve(self.tick, self.rng, self.cfg, common + sectors[c.sector], volatility)
             if e:
@@ -77,6 +80,7 @@ class SimEngine:
         orders: list[Order] = []
         for t in self.traders:
             orders.extend(t.decide(quotes[t.focus], self.cfg, self.rng))
+        orders.extend(external_orders)  # submitted from the previous tick's information
         self.rng.shuffle(orders)
 
         for o in orders:
@@ -112,6 +116,14 @@ class SimEngine:
                        for o in self.open_orders[trader_id].values() if o.side is Side.BUY)
         return max(0.0, self.by_id[trader_id].cash - reserved)
 
+    def add_account(self, trader_id: str, capital: float) -> None:
+        if trader_id in self.by_id or not np.isfinite(capital) or capital <= 0:
+            raise ValueError("account must be new and funded with positive finite capital")
+        traits = Traits(capital, 1, 1, 0, 1, 0, 0, 1, 0, 0)
+        self.by_id[trader_id] = Trader(trader_id, "agent", traits, self.symbols[0], capital)
+        self.open_orders[trader_id] = {}
+        self.executions[trader_id] = []
+
     def _submit(self, o: Order, strict: bool = False) -> list:
         """One risk gate for human, bot and news orders, before any book mutation."""
         if o.symbol not in self.books or o.trader_id not in self.by_id:
@@ -140,7 +152,7 @@ class SimEngine:
         fills = self.books[o.symbol].add(o)
         for tr in fills:
             self._apply_fill(tr)
-        if o.qty > 0 and o.price is not None:
+        if o.qty > 0 and o.price is not None and not o.ioc:
             self.order_reg[o.id] = (o, self.tick)
             self.open_orders[t.id][o.id] = o
         return fills
@@ -164,8 +176,10 @@ class SimEngine:
                 "symbol": s, "name": self.companies[s].name, "last": round(self.last[s], 2),
                 "fair": round(self.companies[s].public_fair(), 2),
                 "bid": b.best_bid(), "ask": b.best_ask(),
-                "open": round(cur.open, 2) if cur else round(self.last[s], 2),
-                "volume": cur.volume if cur else 0,
+                "open": self.companies[s].price0,
+                "volume": self.volumes[s],
+                "sector": self.companies[s].sector,
+                "history": list(self.history[s]),
                 "depth": b.depth(8),
                 "phase": phases.get(s),  # what the institutions are doing here
             })
@@ -187,8 +201,8 @@ class SimEngine:
     def _groups(self) -> dict[str, int]:
         return dict(Counter(TIER.get(t.archetype, "other") for t in self.traders))
 
-    def portfolio(self) -> dict:
-        u = self.user
+    def portfolio(self, trader_id: str = USER_ID) -> dict:
+        u = self.by_id[trader_id]
         positions = []
         equity = 0.0
         for s, sh in u.positions.items():
@@ -201,12 +215,13 @@ class SimEngine:
             positions.append({"symbol": s, "shares": sh, "avg": round(avg, 2),
                               "last": round(last, 2), "value": round(value, 2),
                               "pnl": round((last - avg) * sh, 2)})
-        return {"cash": round(u.cash, 2), "available_cash": round(self.available_cash(USER_ID), 2),
+        return {"cash": round(u.cash, 2), "available_cash": round(self.available_cash(trader_id), 2),
                 "fee_bps": self.cfg.fee_bps,
                 "orders": [{"id": o.id, "symbol": o.symbol, "side": o.side.value,
                             "qty": o.qty, "price": o.price}
-                           for o in self.open_orders[USER_ID].values() if o.qty > 0],
+                           for o in self.open_orders[trader_id].values() if o.qty > 0],
                 "positions": positions,
+                "fees": round(u.fees_paid, 4), "realized_pnl": round(u.realized_pnl, 4),
                 "equity": round(equity, 2), "total": round(u.cash + equity, 2)}
 
     def candle_list(self, symbol: str) -> list[dict]:
@@ -233,6 +248,8 @@ class SimEngine:
         self.fees += 2 * fee
         if buyer:
             old = buyer.positions.get(s, 0)
+            buyer.realized_pnl += min(q, max(0, -old)) * (buyer.entry.get(s, p) - p) - fee
+            buyer.fees_paid += fee
             new = old + q
             if new > 0:
                 buyer.entry[s] = ((buyer.entry.get(s, p) * old + p * q) / new) if old >= 0 else p
@@ -245,6 +262,8 @@ class SimEngine:
             buyer.buy_rel += rel * q
         if seller:
             old = seller.positions.get(s, 0)
+            seller.realized_pnl += min(q, max(0, old)) * (p - seller.entry.get(s, p)) - fee
+            seller.fees_paid += fee
             seller.positions[s] = old - q
             seller.cash += p * q - fee
             if seller.positions[s] < 0:
@@ -255,6 +274,11 @@ class SimEngine:
             seller.sell_notional += p * q
             seller.sell_rel += rel * q
         self._candle(s).update(p, q)
+        self.volumes[s] += q
+        for tid, side in [(buyer.id, "BUY"), (seller.id, "SELL")]:
+            if tid in self.executions:
+                self.executions[tid].append({"tick": self.tick, "symbol": s, "side": side,
+                                             "qty": q, "price": p, "fee": round(fee, 6)})
         self.flow[s][0 if tr.aggressor is Side.BUY else 1] += q
         self.tape.appendleft({"tick": self.tick, "symbol": s, "price": round(p, 2),
                               "qty": q, "aggressor": tr.aggressor.value})

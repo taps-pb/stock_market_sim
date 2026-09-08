@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import {
   createChart, ColorType, LineStyle, type IChartApi,
-  type ISeriesApi, type UTCTimestamp,
+  type ISeriesApi, type UTCTimestamp, type Time,
 } from "lightweight-charts";
 import { useStore } from "../store";
 import { getCandles } from "../api";
 
 export default function Chart() {
   const selected = useStore((s) => s.selected);
+  const runId = useStore((s) => s.snap?.arena.id);
   const phase = useStore((s) => s.snap?.symbols.find((x) => x.symbol === selected)?.phase);
   const forecast = useStore((s) => s.snap?.model?.signals[selected]);
   const box = useRef<HTMLDivElement>(null);
@@ -19,14 +20,15 @@ export default function Chart() {
     if (!box.current) return;
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#0e1117" }, textColor: "#c9d1d9" },
-      grid: { vertLines: { color: "#1b2029" }, horzLines: { color: "#1b2029" } },
-      timeScale: { borderColor: "#30363d" },
-      rightPriceScale: { borderColor: "#30363d" },
+      layout: { background: { type: ColorType.Solid, color: "#11181b" }, textColor: "#829995", fontSize: 10 },
+      grid: { vertLines: { color: "#1d2a2d" }, horzLines: { color: "#1d2a2d" } },
+      timeScale: { borderColor: "#27383b", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
+      localization: { timeFormatter: (time: Time) => `Tick ${Number(time) * 20}` },
+      rightPriceScale: { borderColor: "#27383b" },
     });
     candle.current = c.addCandlestickSeries({
-      upColor: "#26a67a", downColor: "#e05561", borderVisible: false,
-      wickUpColor: "#26a67a", wickDownColor: "#e05561",
+      upColor: "#70dfb8", downColor: "#ee898b", borderVisible: false,
+      wickUpColor: "#70dfb8", wickDownColor: "#ee898b",
     });
     vol.current = c.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "" });
     vol.current.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
@@ -41,6 +43,9 @@ export default function Chart() {
 
   useEffect(() => {
     let alive = true;
+    let first = true;
+    candle.current?.setData([]);
+    vol.current?.setData([]);
     const load = () =>
       getCandles(selected).then((cs) => {
         if (!alive || !candle.current || !vol.current) return;
@@ -50,11 +55,12 @@ export default function Chart() {
         vol.current.setData(cs.map((c) => ({
           time: c.t as UTCTimestamp, value: c.v, color: c.c >= c.o ? "#26a67a55" : "#e0556155",
         })));
+        if (first && cs.length) { chart.current?.timeScale().fitContent(); first = false; }
       }).catch(() => {});
     load();
     const id = setInterval(load, 1000); // poll the live candle once a second
     return () => { alive = false; clearInterval(id); };
-  }, [selected]);
+  }, [selected, runId]);
 
   useEffect(() => {
     const series = candle.current;

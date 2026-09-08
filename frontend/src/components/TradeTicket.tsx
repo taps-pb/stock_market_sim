@@ -4,6 +4,7 @@ import { placeOrder, getPortfolio } from "../api";
 
 export default function TradeTicket() {
   const selected = useStore((s) => s.selected);
+  const running = useStore((s) => s.snap?.arena.status === 'running' && s.connected);
   const setPortfolio = useStore((s) => s.setPortfolio);
   const sym = useStore((s) => s.snap?.symbols.find((x) => x.symbol === selected));
   const [qty, setQty] = useState(10);
@@ -14,6 +15,9 @@ export default function TradeTicket() {
     setMsg(null);
     try {
       const price = limit.trim() === "" ? null : Number(limit);
+      if (!Number.isInteger(qty) || qty <= 0 || (price !== null && (!Number.isFinite(price) || price < .01))) {
+        throw new Error('Enter a whole share quantity and a positive limit price.');
+      }
       const res = await placeOrder({ symbol: selected, side, qty, price });
       setPortfolio(res.portfolio);
       setMsg(res.filled ? `${side} ${res.filled} @ ${res.avg_price}`
@@ -36,9 +40,10 @@ export default function TradeTicket() {
         <input type="number" step="0.01" value={limit} placeholder="market" onChange={(e) => setLimit(e.target.value)} />
       </label>
       <div className="btns">
-        <button className="buy" onClick={() => submit("BUY")}>Buy</button>
-        <button className="sell" onClick={() => submit("SELL")}>Sell</button>
+        <button className="buy" disabled={!running} onClick={() => submit("BUY")}>Buy</button>
+        <button className="sell" disabled={!running} onClick={() => submit("SELL")}>Sell</button>
       </div>
+      {!running && <div className="msg">Trading opens when the experiment is running.</div>}
       {msg && <div className="msg">{msg}</div>}
     </div>
   );

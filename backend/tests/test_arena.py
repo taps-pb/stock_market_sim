@@ -1,0 +1,137 @@
+"""Funded-agent execution, information timing, risk limits and durable results."""
+from dataclasses import asdict
+import json
+
+import pytest
+
+from app.agent import plan_orders
+from app.arena import AI_ID, HOLD_ID, Arena, Experiment, RunStore
+from app.engine.market import Order, Side
+from app.engine.orderbook import OrderBook
+
+
+class PublicPredictor:
+    horizon = 10
+    def step(self, engine):
+        return {'signals': {s: {'price': engine.last[s] * 1.05, 'prob': .9, 'return_pct': 5}
+                            for s in engine.symbols}}
+
+
+def test_policy_respects_capital_exposure_and_costs_without_private_inputs():
+    settings = {**asdict(Experiment(capital=1000)), 'fee_bps': 1}
+    quote = dict(symbol='X', last=100, bid=99.9, ask=100, depth={'asks': [(100, 100)], 'bids': [(99.9, 100)]})
+    account = dict(total=1000, available_cash=1000, equity=0, positions=[])
+    orders = plan_orders([quote], {'X': {'price': 110, 'prob': .9}}, account, settings, {}, 20)
+    assert len(orders) == 1
+    assert orders[0]['qty'] * orders[0]['price'] * 1.0001 <= 1000 * settings['max_position']
+    assert plan_orders([quote], {'X': {'price': 100.1, 'prob': .9}}, account, settings, {}, 20) == []
+    assert plan_orders([quote], {'X': {'price': 110, 'prob': .4}}, account, settings, {}, 20) == []
+    account['equity'] = 600
+    assert plan_orders([quote], {'X': {'price': 110, 'prob': .9}}, account, settings, {}, 20) == []
+    account['positions'] = [dict(symbol='X', shares=2, last=98, avg=100)]
+    exits = plan_orders([quote], {}, account, settings, {'X': 20}, 20)
+    assert exits[0]['side'] == 'SELL' and exits[0]['qty'] == 2
+
+
+def test_ioc_partially_fills_and_never_leaves_a_resting_order():
+    book = OrderBook('X')
+    book.add(Order('X', Side.SELL, 3, 100, 'seller'))
+    incoming = Order('X', Side.BUY, 8, 100, 'buyer', ioc=True)
+    assert sum(t.qty for t in book.add(incoming)) == 3
+    assert book.best_bid() is None and book.best_ask() is None
+
+
+def test_agent_orders_execute_next_tick_and_conserve_money():
+    arena = Arena(Experiment(duration=100), PublicPredictor())
+    engine = arena.engine
+    initial = sum(t.cash for t in engine.by_id.values())
+    shares = {s: sum(t.positions.get(s, 0) for t in engine.by_id.values()) for s in engine.symbols}
+    for _ in range(60):
+        arena.step()
+    assert not engine.executions[AI_ID] and arena.pending
+    arena.status = 'paused'
+    arena.step()
+    assert engine.tick == 60  # pausing does not consume queued orders
+    arena.status = 'running'
+    while not arena.terminal:
+        arena.step()
+        assert engine.by_id[AI_ID].cash >= -1e-7
+        assert all(q >= 0 for q in engine.by_id[AI_ID].positions.values())
+        assert not engine.open_orders[AI_ID]
+    fills = engine.executions[AI_ID]
+    assert fills and all(t['tick'] >= 61 for t in fills)
+    orders = [d for d in arena.decisions if d['side'] != 'WAIT']
+    assert all(d['execution_tick'] == d['tick'] + 1 for d in orders)
+    assert sum(d['filled'] for d in orders if d['trader'] == AI_ID) == sum(t['qty'] for t in fills)
+    assert sum(t.cash for t in engine.by_id.values()) + engine.fees == pytest.approx(initial)
+    assert {s: sum(t.positions.get(s, 0) for t in engine.by_id.values()) for s in engine.symbols} == shares
+    account = arena.account(AI_ID)
+    assert account['net_pnl'] == pytest.approx(account['total'] - account['initial'], abs=.01)
+    assert account['realized_pnl'] + account['unrealized_pnl'] == pytest.approx(account['net_pnl'], abs=.10)
+    assert account['fees'] > 0
+    assert arena.status == 'completed'
+    json.dumps(arena.result(), allow_nan=False)
+
+
+def test_halt_cancels_planned_buys_and_persists_without_erasing_results(tmp_path):
+    arena = Arena(Experiment(duration=100), PublicPredictor())
+    for _ in range(65):
+        arena.step()
+    arena.agent_halted = True
+    arena._plan(liquidate=False)
+    assert not any(tid == AI_ID and order['side'] == 'BUY' for tid, order in arena.pending)
+    arena.finish()
+    while not arena.terminal:
+        arena.step()
+    store = RunStore(tmp_path / 'runs.db')
+    store.save(arena)
+    store.save(arena)  # idempotent shutdown/save
+    assert len(store.list()) == 1
+    saved = store.get(arena.id)
+    assert saved['arena']['agent'] == arena.account(AI_ID)
+    assert saved['arena']['fills'] == arena.engine.executions[AI_ID]
+    assert store.get('missing') is None
+
+
+def test_seed_reproduces_actual_fills_and_account_results():
+    results = []
+    for _ in range(2):
+        arena = Arena(Experiment(seed=91, duration=100), PublicPredictor())
+        while not arena.terminal:
+            arena.step()
+        results.append((arena.account(AI_ID), arena.engine.executions[AI_ID]))
+    assert results[0] == results[1]
+    with pytest.raises(ValueError):
+        Experiment(capital=float('nan'))
+    with pytest.raises(ValueError):
+        Experiment(max_position=.3, max_exposure=.2)
+
+
+def test_drawdown_halts_buys_and_illiquidity_never_creates_fake_cash():
+    arena = Arena(Experiment(duration=100), PublicPredictor())
+    for _ in range(65):
+        arena.step()
+    # An equity shock must stop new risk without waiting for a decision interval.
+    arena.engine.by_id[AI_ID].cash -= 20_000
+    arena.engine.by_id['NEWS'].cash += 20_000
+    arena.step()
+    assert arena.agent_halted
+    assert not any(tid == AI_ID and d['side'] == 'BUY' for tid, d in arena.pending)
+
+    empty = Arena(Experiment(duration=100), PublicPredictor())
+    engine = empty.engine
+    engine.traders = []
+    engine.cfg.news_prob = 0
+    symbol = engine.symbols[0]
+    price = engine.last[symbol]
+    engine._submit(Order(symbol, Side.SELL, 1, price, 'NEWS'))
+    engine._submit(Order(symbol, Side.BUY, 1, None, AI_ID, ioc=True))
+    cash = engine.by_id[AI_ID].cash
+    empty.finish()
+    while not empty.terminal:
+        empty.step()
+    assert empty.engine.tick == 100
+    account = empty.account(AI_ID)
+    assert account['cash'] == pytest.approx(cash, abs=.01)
+    assert account['illiquid_shares'] == 1 and account['liquidation_value'] is None
+    assert empty.snapshot()['arena']['verdict'] == 'Open inventory'

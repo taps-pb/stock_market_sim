@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from collections import deque
+from hashlib import sha256
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -13,6 +15,7 @@ from .train import SCHEMA_VERSION, forecast
 
 class Predictor:
     def __init__(self, path: str) -> None:
+        self.fingerprint = sha256(Path(path).read_bytes()).hexdigest()[:16]
         self.artifact = joblib.load(path)
         d = self.artifact
         if (d.get("schema_version") != SCHEMA_VERSION or d.get("sim_version") != SIM_VERSION

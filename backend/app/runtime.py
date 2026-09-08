@@ -1,4 +1,4 @@
-"""Process-wide singletons: the running simulation + the WebSocket hub."""
+"""One local experiment, driven by the same Arena used for offline evaluation."""
 from __future__ import annotations
 
 import asyncio
@@ -7,56 +7,74 @@ import logging
 from pathlib import Path
 
 from fastapi import WebSocket
+from ml.predict import Predictor
+from .arena import Arena, Experiment, RunStore
 
-from .config import Config, SEED_COMPANIES
-from .engine.simulation import SimEngine
+ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = ROOT / "ml" / "model.pkl"
+store = RunStore(ROOT / "data" / "runs.sqlite3")
+speed = 1
 
-cfg = Config()
-engine = SimEngine(cfg, SEED_COMPANIES)
 
-# Optional live prediction model (train it with `python -m ml.train --save ml/model.pkl`).
-_MODEL_PATH = Path(__file__).resolve().parents[1] / "ml" / "model.pkl"
-try:
-    from ml.predict import Predictor
-    predictor: "Predictor | None" = Predictor(str(_MODEL_PATH)) if _MODEL_PATH.exists() else None
-except Exception:
-    logging.getLogger(__name__).exception("Price model could not be loaded; regenerate data and retrain")
-    predictor = None
+def create_arena(settings: Experiment) -> Arena:
+    try:
+        predictor = Predictor(str(MODEL_PATH))
+    except Exception:
+        logging.getLogger(__name__).exception("Unable to load the trading model")
+        predictor = None
+    return Arena(settings, predictor)
 
-state: dict = engine.snapshot()  # latest snapshot (+ model signals), served over REST too
+
+# ponytail: one local workspace; isolate engines per workspace if multi-user access is added.
+arena = create_arena(Experiment())
+state = arena.snapshot()
 
 
 class Hub:
-    def __init__(self) -> None:
+    def __init__(self):
         self.clients: set[WebSocket] = set()
 
-    async def connect(self, ws: WebSocket) -> None:
+    async def connect(self, ws: WebSocket):
         await ws.accept()
         self.clients.add(ws)
 
-    def drop(self, ws: WebSocket) -> None:
+    def drop(self, ws: WebSocket):
         self.clients.discard(ws)
 
-    async def broadcast(self, payload: dict) -> None:
-        msg = json.dumps(payload)
-        for ws in list(self.clients):
+    async def broadcast(self, payload: dict):
+        message = json.dumps(payload, allow_nan=False)
+        async def send(ws):
             try:
-                await ws.send_text(msg)
+                await asyncio.wait_for(ws.send_text(message), timeout=1)
             except Exception:
                 self.drop(ws)
+        await asyncio.gather(*(send(ws) for ws in list(self.clients)))
 
 
 hub = Hub()
 
 
-async def run_loop() -> None:
-    """Step the sim on a fixed clock and push each snapshot to all clients."""
+def refresh():
     global state
-    dt = cfg.tick_ms / 1000
+    state = arena.snapshot()
+    state["arena"]["speed"] = speed
+    if arena.terminal and not arena.archived:
+        store.save(arena)
+    return state
+
+
+async def run_loop():
     while True:
-        snap = engine.step()
-        if predictor is not None:
-            snap["model"] = predictor.step(engine)  # {signals, accuracy, n, horizon}
-        state = snap
-        await hub.broadcast(snap)
-        await asyncio.sleep(dt)
+        started = asyncio.get_running_loop().time()
+        try:
+            for _ in range(speed):
+                arena.step()
+            refresh()
+            await hub.broadcast(state)
+        except Exception as exc:
+            logging.getLogger(__name__).exception("Experiment stopped")
+            arena.status, arena.error = "failed", str(exc)
+            arena.pending = []
+            refresh()
+        elapsed = asyncio.get_running_loop().time() - started
+        await asyncio.sleep(max(.01, arena.engine.cfg.tick_ms / 1000 - elapsed))

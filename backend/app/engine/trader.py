@@ -61,6 +61,8 @@ class Trader:
     sell_notional: float = 0.0
     buy_rel: float = 0.0             # sum of (price/fair)*qty at fill time (beta-neutral)
     sell_rel: float = 0.0
+    fees_paid: float = 0.0
+    realized_pnl: float = 0.0  # closed-position P&L minus all fees paid so far
 
     # --- emotion -------------------------------------------------------
     def update_emotion(self, q: Quote, cfg) -> None:

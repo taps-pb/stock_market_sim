@@ -52,7 +52,7 @@ class OrderBook:
             raise ValueError("order symbol does not match book")
         book = self._asks if order.side is Side.BUY else self._bids
         trades = self._match(order, book)
-        if order.qty > 0 and order.price is not None:
+        if order.qty > 0 and order.price is not None and not order.ioc:
             self._rest(order)
         return trades
 
