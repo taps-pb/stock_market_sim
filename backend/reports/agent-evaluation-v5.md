@@ -1,5 +1,7 @@
 # Funded-agent evaluation · market v4, model v5 calibration, tuned policy
 
+> **Historical record, not adopted.** Platt calibration made results worse and was reverted; the shipped model is still v4 (`ccb7cf6b4d6d7415`). The live defaults also stay at v4 because the tuned policy isn't clearly better (overlapping CIs, more losing runs). The grid (`policy-tuning-v5.json`) and ablation are kept as records.
+
 ## What changed vs v4
 
 | | v4 report | v5 report |
