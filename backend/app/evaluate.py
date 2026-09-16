@@ -10,6 +10,20 @@ from .arena import Arena, Experiment, RunStore
 from ml.predict import Predictor
 
 
+def summarize(results: list[dict]) -> dict:
+    agents = [r for r in results if not r['agent']['positions']]
+    paired = [r for r in agents if not r['benchmark']['positions']]
+    return {'runs': len(results), 'agent_settled': len(agents), 'paired_settled': len(paired),
+            'profitable': sum(r['agent']['net_pnl'] > 0 for r in agents),
+            'losses': sum(r['agent']['net_pnl'] < 0 for r in agents),
+            'flat': sum(r['agent']['net_pnl'] == 0 for r in agents),
+            'agent_open_inventory_runs': len(results) - len(agents),
+            'benchmark_open_inventory_runs': sum(bool(r['benchmark']['positions']) for r in results),
+            'beat_hold': sum(r['excess_pnl'] > 0 for r in paired),
+            'mean_return_pct': mean(r['agent']['return_pct'] for r in agents) if agents else None,
+            'mean_excess_pnl': mean(r['excess_pnl'] for r in paired) if paired else None}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--seeds', nargs='+', type=int, default=[101, 102, 103])
@@ -29,17 +43,13 @@ def main():
                 arena.step()
             store.save(arena)
             result = arena.snapshot()['arena']
-            row = {k: result[k] for k in ['id', 'settings', 'status', 'verdict', 'agent', 'benchmark', 'excess_pnl', 'model_fingerprint']}
+            row = {k: result[k] for k in ['id', 'settings', 'status', 'verdict', 'agent', 'benchmark', 'excess_pnl',
+                                         'model_fingerprint', 'sim_version', 'policy_version']}
             results.append(row)
             print(f"{scenario:9s} seed {seed:4d}: Atlas {row['agent']['net_pnl']:+9.2f}, "
                   f"hold {row['benchmark']['net_pnl']:+9.2f}, drawdown {row['agent']['max_drawdown_pct']:.2f}%, "
                   f"{row['verdict']}", flush=True)
-    settled = [r for r in results if not r['agent']['positions'] and not r['benchmark']['positions']]
-    summary = {'runs': len(results), 'settled': len(settled),
-               'profitable': sum(r['agent']['net_pnl'] > 0 for r in settled),
-               'beat_hold': sum(r['excess_pnl'] > 0 for r in settled),
-               'mean_return_pct': mean(r['agent']['return_pct'] for r in settled) if settled else None,
-               'mean_excess_pnl': mean(r['excess_pnl'] for r in settled) if settled else None}
+    summary = summarize(results)
     output = {'method': 'Funded accounts, shared live matching engine, next-tick orders, fees and finite liquidity. Synthetic markets only.',
               'summary': summary, 'runs': results}
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

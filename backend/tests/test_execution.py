@@ -79,3 +79,23 @@ def test_market_maker_widens_and_reduces_depth_when_volatile():
     stress = mm.decide(Quote(mm.focus, 100, 100, 100, 99, 101, 0.02), eng.cfg, np.random.default_rng(1))
     assert stress[1].price - stress[0].price > calm[1].price - calm[0].price
     assert sum(o.qty for o in stress) < sum(o.qty for o in calm)
+
+
+def test_external_news_is_independent_of_policy_order_counts():
+    idle = SimEngine(Config(seed=987), SEED_COMPANIES)
+    active = SimEngine(Config(seed=987), SEED_COMPANIES)
+    for _ in range(100):
+        idle.step()
+        active.step([Order('NOVA', Side.BUY, 1, .01, USER_ID, ioc=True)])
+        assert idle.stressed == active.stressed
+        assert list(idle.events) == list(active.events)
+        assert [(c.eps, c.published_eps) for c in idle.companies.values()] == [
+            (c.eps, c.published_eps) for c in active.companies.values()]
+
+
+def test_market_maker_reprices_current_information_without_waiting_for_a_print():
+    eng = SimEngine(Config(), SEED_COMPANIES)
+    mm = next(t for t in eng.traders if t.traits.is_market_maker)
+    quotes = mm.decide(Quote(mm.focus, 100, 100, 110, 99.9, 100.1), eng.cfg, np.random.default_rng(0))
+    assert quotes[0].price > 105  # the old 100 print is no longer the sole reservation value
+    assert quotes[0].qty > 100  # a skilled provider actually competes for the stale offer

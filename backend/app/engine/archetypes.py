@@ -77,9 +77,9 @@ def build_traders(cfg, symbols: list[str], prices: dict[str, float], rng: np.ran
                         cash=t.capital, _bias=float(rng.normal(0, (1 - t.skill) * 0.15)))
             if t.is_institution:
                 tr.campaign_target = t.capital * cfg.campaign_alloc / prices[focus]
-                tr.phase = "accumulate"  # start flat and build a position
-            else:
-                _seed_position(tr, prices[focus], rng)
+                tr.phase = str(rng.choice(["accumulate", "markup", "distribute", "markdown"]))
+                tr.phase_ticks = int(rng.integers(0, max(1, t.horizon // 5)))
+            _seed_position(tr, prices[focus], rng)
             traders.append(tr)
 
     # noise = the always-crossing liquidity that keeps price discovery alive.

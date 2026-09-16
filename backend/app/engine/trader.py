@@ -63,6 +63,7 @@ class Trader:
     sell_rel: float = 0.0
     fees_paid: float = 0.0
     realized_pnl: float = 0.0  # closed-position P&L minus all fees paid so far
+    value_estimate: float | None = None  # market maker's noisy current reservation value
 
     # --- emotion -------------------------------------------------------
     def update_emotion(self, q: Quote, cfg) -> None:
@@ -81,6 +82,8 @@ class Trader:
     def decide(self, q: Quote, cfg, rng: np.random.Generator) -> list[Order]:
         t = self.traits
         if t.is_market_maker:
+            observation = q.fair * float(np.exp(rng.normal(0, cfg.mm_signal_noise)))
+            self.value_estimate = observation if self.value_estimate is None else .5 * self.value_estimate + .5 * observation
             return self._make_market(q, cfg)
         if t.activity <= 0 or rng.random() > t.activity:
             return []
@@ -143,14 +146,15 @@ class Trader:
         short_cap = -cfg.short_cap_frac * T
         self.phase_ticks += 1
         ph = self.phase
-        if ph == "accumulate" and (inv >= T or self.phase_ticks > cfg.accum_timeout):
+        clock = self.phase_ticks * 800 / self.traits.horizon
+        if ph == "accumulate" and (inv >= T or clock > cfg.accum_timeout):
             ph = "markup"                                    # loaded up cheap (or gave up); now wait
-        elif ph == "markup" and (P >= F * (1 + cfg.mk_target) or self.phase_ticks > cfg.markup_timeout):
+        elif ph == "markup" and (P >= F * (1 + cfg.mk_target) or clock > cfg.markup_timeout):
             ph = "distribute"                                # retail pumped it (or gave up); sell
-        elif ph == "distribute" and (inv <= T * 0.10 or self.phase_ticks > cfg.distribute_timeout):
+        elif ph == "distribute" and (inv <= T * 0.10 or clock > cfg.distribute_timeout):
             ph = "markdown"
         elif ph == "markdown" and (P <= F * (1 - cfg.md_target) or inv <= short_cap
-                                   or self.phase_ticks > cfg.markdown_timeout):
+                                   or clock > cfg.markdown_timeout):
             ph = "accumulate"
         if ph != self.phase:
             self.phase, self.phase_ticks = ph, 0
@@ -185,10 +189,20 @@ class Trader:
         cap_sh = max(1.0, self.traits.capital * 0.5 / mid)   # inventory limit (notional)
         skew = max(-1.0, min(1.0, inv / cap_sh))             # +long / -short
         spread = max(0.01, mid * (cfg.mm_half_spread + cfg.mm_vol_spread * q.volatility))
-        center = mid * (1 - 0.0015 * skew)                  # lean quotes to revert toward flat
+        # Stale last-trade anchoring subsidized predictable campaigns. Competing
+        # makers now price current (imperfect) information, with inventory pressure.
+        estimate = self.value_estimate if self.value_estimate is not None else q.fair
+        center = (cfg.mm_value_weight * estimate + (1 - cfg.mm_value_weight) * mid) * (1 - 0.0015 * skew)
         base = max(1, int(self.traits.capital / mid / 300
                           / (1 + cfg.mm_liquidity_sensitivity * q.volatility)))
         bid_sz, ask_sz = max(0, int(base * (1 - skew))), max(0, int(base * (1 + skew)))
+        # Providers also take obvious mispricing. Fixed tiny quote sizes left
+        # multi-percent bargains untouched for many ticks in the previous market.
+        opportunity = int(self.traits.capital * cfg.mm_opportunity_alloc / mid)
+        if q.best_ask is not None and q.best_ask < center - 2 * spread:
+            bid_sz = max(bid_sz, min(opportunity, max(0, int(cap_sh - inv))))
+        if q.best_bid is not None and q.best_bid > center + 2 * spread:
+            ask_sz = max(ask_sz, min(opportunity, max(0, int(cap_sh + inv))))
         out = []
         if bid_sz:
             out.append(Order(self.focus, Side.BUY, bid_sz, max(0.01, center - spread), self.id))
@@ -199,7 +213,7 @@ class Trader:
     def _noise(self, q: Quote, rng) -> list[Order]:
         side = Side.BUY if rng.random() < 0.5 else Side.SELL
         if side is Side.SELL and self.positions.get(self.focus, 0) <= 0:
-            side = Side.BUY
+            return []  # an unfunded sell intent must not become compulsory buying
         qty = int(rng.integers(1, 20))
         px = q.last * (1 + rng.normal(0, 0.004))
         return [Order(self.focus, side, qty, px, self.id)]

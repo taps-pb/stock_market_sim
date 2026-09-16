@@ -9,10 +9,13 @@ from pathlib import Path
 from fastapi import WebSocket
 from ml.predict import Predictor
 from .arena import Arena, Experiment, RunStore
+from .replay import DatasetStore
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "ml" / "model.pkl"
 store = RunStore(ROOT / "data" / "runs.sqlite3")
+datasets = DatasetStore(ROOT / "data" / "replay")
+starting = False
 speed = 1
 
 
@@ -77,4 +80,4 @@ async def run_loop():
             arena.pending = []
             refresh()
         elapsed = asyncio.get_running_loop().time() - started
-        await asyncio.sleep(max(.01, arena.engine.cfg.tick_ms / 1000 - elapsed))
+        await asyncio.sleep(max(.01, .25 - elapsed))

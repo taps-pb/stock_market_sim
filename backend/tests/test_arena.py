@@ -8,6 +8,7 @@ from app.agent import plan_orders
 from app.arena import AI_ID, HOLD_ID, Arena, Experiment, RunStore
 from app.engine.market import Order, Side
 from app.engine.orderbook import OrderBook
+from app.evaluate import summarize
 
 
 class PublicPredictor:
@@ -31,6 +32,48 @@ def test_policy_respects_capital_exposure_and_costs_without_private_inputs():
     account['positions'] = [dict(symbol='X', shares=2, last=98, avg=100)]
     exits = plan_orders([quote], {}, account, settings, {'X': 20}, 20)
     assert exits[0]['side'] == 'SELL' and exits[0]['qty'] == 2
+
+
+def test_super_risky_profile_uses_maximum_limits_fomo_and_fear():
+    settings = {**asdict(Experiment(risk_profile='super_risky', max_position=.30,
+                    max_exposure=.90, max_drawdown=.30, stop_loss=.15,
+                    min_probability=.50, min_edge_bps=0, slippage_bps=100,
+                    participation=.50)), 'fee_bps': 1}
+    quote = dict(symbol='X', last=100, bid=99.9, ask=100,
+                 depth={'asks': [(100, 100)], 'bids': [(99.9, 100)]})
+    account = dict(total=1000, available_cash=1000, equity=0, positions=[])
+    # A bullish classification still chases when forecast return cannot cover costs.
+    signal = {'X': {'price': 100.1, 'prob': .50, 'return_pct': .1}}
+    orders = plan_orders([quote], signal,
+                         account, settings, {}, 20)
+    assert orders[0]['qty'] == 2 and orders[0]['reason'].startswith('FOMO entry')
+    account.update(available_cash=900, equity=100,
+                   positions=[dict(symbol='X', shares=1, last=100, avg=100, value=100)])
+    adds = plan_orders([quote], signal, account, settings, {'X': 1}, 20)
+    assert len(adds) == 1 and adds[0]['side'] == 'BUY' and adds[0]['qty'] == 1
+    assert 100 + adds[0]['qty'] * adds[0]['price'] * 1.0001 <= 300
+    rotation = plan_orders([quote], signal, account, settings, {'X': 3}, 20)
+    assert len(rotation) == 1 and rotation[0]['side'] == 'SELL'
+    assert rotation[0]['reason'].startswith('FOMO rotation')
+    exits = plan_orders([quote], {'X': {'price': 99, 'prob': .49}}, account, settings, {'X': 1}, 20)
+    assert len(exits) == 1 and exits[0]['reason'].startswith('Fear exit')
+    with pytest.raises(ValueError, match='risk profile'):
+        Experiment(risk_profile='reckless')
+
+
+def test_super_risky_profile_plans_every_tick_after_warmup():
+    arena = Arena(Experiment(duration=100, risk_profile='super_risky'), PublicPredictor())
+    while arena.engine.tick < 61:
+        arena.step()
+    assert arena.pending  # tick 61 is not a normal five-tick decision boundary
+    arena.engine.by_id[AI_ID].cash -= 35_000
+    arena.engine.by_id['NEWS'].cash += 35_000
+    arena.step()
+    assert arena.drawdowns[AI_ID] > .30 and not arena.agent_halted
+    assert arena.snapshot()['arena']['policy_version'] == 2
+    arena.agent_halted = True  # Explicit manual halt still wins over FOMO.
+    arena.step()
+    assert not any(tid == AI_ID and order['side'] == 'BUY' for tid, order in arena.pending)
 
 
 def test_ioc_partially_fills_and_never_leaves_a_resting_order():
@@ -135,3 +178,11 @@ def test_drawdown_halts_buys_and_illiquidity_never_creates_fake_cash():
     assert account['cash'] == pytest.approx(cash, abs=.01)
     assert account['illiquid_shares'] == 1 and account['liquidation_value'] is None
     assert empty.snapshot()['arena']['verdict'] == 'Open inventory'
+
+
+def test_summary_keeps_agent_losses_when_benchmark_cannot_liquidate():
+    result = summarize([dict(agent=dict(positions=[], net_pnl=-100, return_pct=-.1),
+                             benchmark=dict(positions=[{'symbol': 'X', 'shares': 1}]), excess_pnl=-50)])
+    assert result['losses'] == 1 and result['agent_settled'] == 1
+    assert result['paired_settled'] == 0 and result['benchmark_open_inventory_runs'] == 1
+    assert result['mean_return_pct'] == -.1 and result['mean_excess_pnl'] is None

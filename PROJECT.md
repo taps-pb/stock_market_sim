@@ -52,7 +52,8 @@ a stop fill price, or a maximum loss.
 SQLite stores one complete result document per UUID, idempotently. Saved results
 include settings, full engine configuration, simulator/policy versions, model
 fingerprint, sampled equity curve, full decisions/Atlas fills, and manual fills.
-The list endpoint returns the latest 30; full results are available by ID.
+The list endpoint paginates all runs (30 per page by default), supports kind filters,
+and returns items and total count; full results are available by ID.
 Graceful shutdown archives an active run as interrupted. Live engine state is
 in memory; hard kills can lose the unfinished run, and restarts do not resume it.
 
@@ -62,11 +63,15 @@ disconnect cleanup. This is a single local workspace, not a multi-user service.
 
 ## Forecasting and information boundaries
 
-The existing version-2 model uses observable price lags, volatility, momentum,
+The current version-4 simulator model uses observable price lags, volatility, momentum,
 book imbalance, microprice, signed flow, quote availability, and published
 valuation. It estimates forward return quantiles and up/non-up probability.
 Hidden live value, emotions, inventories, and campaign phases are excluded;
-participant insights in the interface are explicitly observer-only.
+participant insights in the interface are explicitly observer-only. Market makers
+receive noisy current valuation signals, not future values. Their beliefs are
+not visible to the model. The simulator
+therefore remains an information model with assumed signal quality, not a
+calibrated reconstruction of a real venue.
 
 Data recording labels exact future ticks. Whole seeds separate training,
 calibration, and test markets. Calibration observations are spaced by the
@@ -77,8 +82,9 @@ identify the exact model used in each funded experiment.
 The old one-share forecast replay remains a diagnostic in `ml/report.md`.
 Funded performance now comes from the actual matching engine, with finite
 capital, delayed orders, market impact, fees, partial fills, and closing trades.
-Changing the policy or even benchmark submission order can change a seeded
-market path because all accounts interact. Compare reports with their exact
+Changing the policy or benchmark submission order can change a seeded market
+price path because all accounts interact. Fundamentals and news now have an
+independent random stream: those external draws remain fixed across policies. Compare reports with their exact
 settings, model, and code; a seed alone does not identify an experiment.
 
 ## Interface and validation
@@ -91,14 +97,37 @@ can be inspected and exported as JSON. Desktop and 390-pixel mobile layouts
 were checked in Chrome, including funding, pause, speed, finish, stock switching,
 and archive inspection.
 
-The current implementation passes 26 backend tests, the WebSocket lifecycle
+The synthetic implementation passed 29 backend tests, the WebSocket lifecycle
 check, and the TypeScript/Vite production build. Tests include next-tick timing,
 resource conservation, IOC handling, account P&L, deterministic runs, risk
-stops, and stranded inventory. No new runtime dependency was needed.
+stops, and stranded inventory. No new runtime dependency was needed. Tests now also prove that changing
+hidden state cannot alter live features, changing test outcomes cannot alter
+the fitted model, and changing order counts cannot alter external news.
+
+## Historical replay
+
+`app/replay.py` owns CSV validation, normalized content fingerprints, chronological
+training/calibration, and `HistoricalArena`. It shares runtime controls and the
+SQLite archive with synthetic runs but never creates an order book. Price features
+are shared through `ml.features.price_row`; both frozen models receive only causal
+vectors, never symbols, calendar dates, or future bars. Missing simulator inputs
+are explicitly zero in the transfer baseline.
+
+Dataset-wide date boundaries enforce 70/15/15 splits with purged 20-session targets
+and embargoes. The replay seed selects a symbol and contiguous test window. The
+chart reveals 59 context bars plus one bar per step. Forecasts are recorded daily;
+headline metrics and the one-share paper strategy use non-overlapping checkpoints.
+Incomplete horizons and open inventory remain visible when the run ends. Models
+are fitted in a worker thread, and a start guard prevents competing run creations.
+
+The frontend stores historical and synthetic snapshots separately, uses a dedicated
+replay view, and disables exchange-only interfaces for replay. Archive pagination
+returns `{items,total,limit,offset}`; old rows without a kind are synthetic. The
+README documents the CSV contract, API, units, small-sample limits, and reproduction.
 
 ## Known realism limits
 
-The market is still highly learnable. Three seeds across three regimes are a
+The market is still highly learnable. Eight final seeds across three regimes are a
 small synthetic test, with dependencies across scenarios and symbols. No claim
 of real-market accuracy or profitability follows from these results. The
 classifier's up probability is not a calibrated probability of profitable
@@ -110,3 +139,32 @@ extensions can add heterogeneous information delays and competing adaptive
 strategies. Institutions currently have bounded short capacity without a full
 margin, borrow, or default system. Real exchange calendars, corporate actions,
 dividends, and multi-venue execution are not implemented.
+
+
+## Profitability audit and market v4
+
+The old archive had 23 profitable completed runs and one flat disabled-agent
+run. Reused seeds and early-stopped runs made that an invalid independent
+24-trial success estimate. Individual round trips did lose money, but profitable
+runs were implausibly consistent. The audit found no direct lookahead input;
+fresh random, always-buy, and simple momentum controls all lost money.
+
+The simulator supplied exploitable behavior: all institutions began accumulating,
+market makers followed stale prints with tiny fixed sizes, and professional
+traders ignored moderate mispricing because fractional-return scores were
+compared with a 15% threshold. A v3 candidate changed maker valuation and
+campaign timing but amplified price-gap arbitrage. Its results are preserved;
+it was rejected as an adequate fix.
+
+V4 retains independent exogenous randomness and asynchronous campaigns, lowers
+the action threshold to 50 basis points of the weighted score, and lets market
+makers commit bounded capital to sufficiently mispriced opposing quotes.
+Unfunded noise sell intentions no longer become mandatory buys. The forecast
+model was retrained on fresh v4 data using the original train/calibration/test
+seed split. Trading-policy thresholds were not tuned to the final outcomes.
+
+`python -m app.audit` runs model-free controls, accounts for winning and losing
+round trips, reconciles cash P&L to fills, and measures return dependence and
+volatility clustering. Audits and rejected candidates are in `backend/reports/`;
+old models are in `backend/ml/archive/`. Tests must not require any trader
+category to make money. Realism is not defined as a target loss frequency.

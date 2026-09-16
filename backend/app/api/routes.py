@@ -1,15 +1,74 @@
 """Local experiment controls, observed exchange data, and saved results."""
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import runtime
 from ..arena import Experiment
 from ..engine.market import Side
+from ..replay import HistoricalArena, MAX_BYTES
+from ml.predict import Predictor
 
 router = APIRouter()
+
+
+def synthetic_engine():
+    if isinstance(runtime.arena, HistoricalArena):
+        raise HTTPException(409, "Order books and manual trading are unavailable during historical replay")
+    return runtime.arena.engine
+
+
+class ReplayIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    dataset_id: str = Field(pattern=r"^[a-f0-9]{64}$")
+    seed: int = Field(default=42, ge=0, le=2**32 - 1, strict=True)
+    duration: int = Field(default=100, ge=100, le=10_000, strict=True)
+
+
+@router.post("/api/replay-datasets")
+async def import_dataset(request: Request, name: str = "history.csv"):
+    if request.headers.get("content-type", "").split(";")[0] != "text/csv":
+        raise HTTPException(415, "Upload a text/csv body")
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > MAX_BYTES:
+            raise HTTPException(413, "CSV exceeds 10 MiB")
+    try:
+        return await asyncio.to_thread(runtime.datasets.import_csv, bytes(raw), name)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/api/replay-datasets")
+async def datasets():
+    return runtime.datasets.list()
+
+
+@router.post("/api/replay-runs")
+async def start_replay(body: ReplayIn):
+    if not runtime.arena.terminal or runtime.starting:
+        raise HTTPException(409, "Finish the current experiment before starting another one")
+    runtime.starting = True
+    try:
+        def build():
+            frame = runtime.datasets.load(body.dataset_id)
+            predictor = Predictor(str(runtime.MODEL_PATH))
+            return HistoricalArena(frame, body.dataset_id, body.seed, body.duration, predictor)
+        next_arena = await asyncio.to_thread(build)
+        if not runtime.arena.archived:
+            runtime.store.save(runtime.arena)
+        runtime.arena = next_arena
+        return runtime.refresh()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except (OSError, KeyError) as exc:
+        raise HTTPException(503, "Unable to load replay data or the simulator model") from exc
+    finally:
+        runtime.starting = False
 
 
 class RunIn(BaseModel):
@@ -18,9 +77,15 @@ class RunIn(BaseModel):
     seed: int = Field(default=42, ge=0, le=2**32 - 1, strict=True)
     duration: int = Field(default=1500, ge=100, le=10_000, strict=True)
     scenario: Literal["balanced", "volatile", "retail"] = "balanced"
+    risk_profile: Literal["cautious", "balanced", "assertive", "super_risky"] = "balanced"
     max_position: float = Field(default=.20, ge=.01, le=.30, allow_inf_nan=False)
     max_exposure: float = Field(default=.60, ge=.1, le=.9, allow_inf_nan=False)
     max_drawdown: float = Field(default=.08, ge=.01, le=.30, allow_inf_nan=False)
+    stop_loss: float = Field(default=.025, ge=.005, le=.15, allow_inf_nan=False)
+    min_probability: float = Field(default=.62, ge=.5, le=.95, allow_inf_nan=False)
+    min_edge_bps: float = Field(default=20, ge=0, le=200, allow_inf_nan=False)
+    slippage_bps: float = Field(default=25, ge=0, le=100, allow_inf_nan=False)
+    participation: float = Field(default=.25, ge=.01, le=.5, allow_inf_nan=False)
 
 
 class ControlIn(BaseModel):
@@ -42,7 +107,7 @@ async def state():
 
 @router.post("/api/runs")
 async def start_run(body: RunIn):
-    if not runtime.arena.terminal:
+    if not runtime.arena.terminal or runtime.starting:
         raise HTTPException(409, "Finish the current experiment before funding another one")
     try:
         settings = Experiment(**body.model_dump())
@@ -68,7 +133,7 @@ async def control(body: ControlIn):
         arena.status = "paused"
     elif body.action == "resume" and arena.status == "paused":
         arena.status = "running"
-    elif body.action == "halt_agent" and not arena.terminal:
+    elif body.action == "halt_agent" and not arena.terminal and not isinstance(arena, HistoricalArena):
         arena.agent_halted = True
         arena._plan(liquidate=arena.status == "settling")
     else:
@@ -77,8 +142,9 @@ async def control(body: ControlIn):
 
 
 @router.get("/api/runs")
-async def runs():
-    return runtime.store.list()
+async def runs(limit: int = Query(30, ge=1, le=100), offset: int = Query(0, ge=0),
+               kind: Literal["synthetic", "historical"] | None = None):
+    return runtime.store.page(limit, offset, kind)
 
 
 @router.get("/api/runs/{run_id}")
@@ -91,7 +157,7 @@ async def run_result(run_id: str):
 
 @router.get("/api/symbols/{symbol}/candles")
 async def candles(symbol: str):
-    engine = runtime.arena.engine
+    engine = synthetic_engine()
     if symbol not in engine.books:
         raise HTTPException(404, "unknown symbol")
     return engine.candle_list(symbol)
@@ -99,12 +165,12 @@ async def candles(symbol: str):
 
 @router.get("/api/portfolio")
 async def portfolio():
-    return runtime.arena.engine.portfolio()
+    return synthetic_engine().portfolio()
 
 
 @router.post("/api/orders")
 async def place_order(order: OrderIn):
-    engine = runtime.arena.engine
+    engine = synthetic_engine()
     if runtime.arena.status != "running":
         raise HTTPException(409, "Manual trading requires a running experiment")
     if order.symbol not in engine.books:
@@ -120,9 +186,10 @@ async def place_order(order: OrderIn):
 
 @router.delete("/api/orders/{order_id}")
 async def cancel_order(order_id: int):
-    if not runtime.arena.engine.cancel_user_order(order_id):
+    engine = synthetic_engine()
+    if not engine.cancel_user_order(order_id):
         raise HTTPException(404, "open order not found")
-    return runtime.arena.engine.portfolio()
+    return engine.portfolio()
 
 
 @router.websocket("/ws")

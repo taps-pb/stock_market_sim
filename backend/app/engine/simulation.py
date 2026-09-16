@@ -18,6 +18,8 @@ class SimEngine:
     def __init__(self, cfg, seed_companies) -> None:
         self.cfg = cfg
         self.rng = np.random.default_rng(cfg.seed)
+        # Order counts must not change future earnings/news draws in policy comparisons.
+        self.market_rng = np.random.default_rng(np.random.SeedSequence([cfg.seed, 1]))
         self.companies = build_companies(seed_companies)
         self.symbols = list(self.companies)
         for i, c in enumerate(self.companies.values()):
@@ -58,17 +60,17 @@ class SimEngine:
     def step(self, external_orders: list[Order] = ()) -> dict:
         self.tick += 1
         switch = self.cfg.stress_exit_prob if self.stressed else self.cfg.stress_enter_prob
-        if self.rng.random() < switch:
+        if self.market_rng.random() < switch:
             self.stressed = not self.stressed
         volatility = self.cfg.stress_vol_multiplier if self.stressed else 1.0
-        common = float(self.rng.normal()) * np.sqrt(self.cfg.market_variance)
+        common = float(self.market_rng.normal()) * np.sqrt(self.cfg.market_variance)
         sectors = {c.sector: 0.0 for c in self.companies.values()}
-        sectors = {s: float(self.rng.normal()) * np.sqrt(self.cfg.sector_variance) for s in sectors}
+        sectors = {s: float(self.market_rng.normal()) * np.sqrt(self.cfg.sector_variance) for s in sectors}
         for s in self.symbols:
             self.flow[s][0] = self.flow[s][1] = 0  # reset per-tick signed volume
             self._candle(s)  # keep zero-volume intervals and the previous close
         for c in self.companies.values():
-            e = c.evolve(self.tick, self.rng, self.cfg, common + sectors[c.sector], volatility)
+            e = c.evolve(self.tick, self.market_rng, self.cfg, common + sectors[c.sector], volatility)
             if e:
                 self.events.appendleft({"tick": self.tick, "type": e[0], "symbol": e[1], "surprise": round(e[2], 3)})
         self._expire_orders()
@@ -95,12 +97,12 @@ class SimEngine:
     def _maybe_news(self) -> None:
         """Exogenous headline: a random market order that gaps a random stock.
         Unforeseeable by design — this is what caps how predictable the market is."""
-        if self.rng.random() >= self.cfg.news_prob:
+        if self.market_rng.random() >= self.cfg.news_prob:
             return
-        s = self.symbols[self.rng.integers(0, len(self.symbols))]
-        side = Side.BUY if self.rng.random() < 0.5 else Side.SELL
-        qty = max(1, int(self.cfg.news_notional * float(self.rng.uniform(0.5, 1.6)) / self.last[s]))
-        surprise = float(self.rng.uniform(0.5, 1.5)) * self.cfg.news_surprise * (1 if side is Side.BUY else -1)
+        s = self.symbols[self.market_rng.integers(0, len(self.symbols))]
+        side = Side.BUY if self.market_rng.random() < 0.5 else Side.SELL
+        qty = max(1, int(self.cfg.news_notional * float(self.market_rng.uniform(0.5, 1.6)) / self.last[s]))
+        surprise = float(self.market_rng.uniform(0.5, 1.5)) * self.cfg.news_surprise * (1 if side is Side.BUY else -1)
         self.companies[s].eps *= float(np.exp(surprise))
         self.companies[s].published_eps *= float(np.exp(surprise))
         self._submit(Order(s, side, qty, None, "NEWS"))
@@ -304,5 +306,7 @@ class SimEngine:
 
     def _sentiment(self) -> dict:
         real = [t for t in self.traders if not t.traits.is_market_maker and t.id != USER_ID]
+        if not real:
+            return {"fear": 0., "greed": 0.}
         return {"fear": round(float(np.mean([t.fear for t in real])), 3),
                 "greed": round(float(np.mean([t.greed for t in real])), 3)}

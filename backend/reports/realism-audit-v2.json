@@ -1,0 +1,1286 @@
+[
+  {
+    "seed": 301,
+    "duration": 1500,
+    "strategy": "model",
+    "sim_version": 2,
+    "model": "c886a66255b844af",
+    "agent": {
+      "cash": 101819.25,
+      "available_cash": 101819.25,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 22.6873,
+      "realized_pnl": 1819.2527,
+      "equity": 0.0,
+      "total": 101819.25,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": 1819.25,
+      "return_pct": 1.8192526860000946,
+      "max_drawdown_pct": 0.048740711585260055,
+      "exposure_pct": 0.0,
+      "fills": 293,
+      "unrealized_pnl": 0,
+      "liquidation_value": 101819.25,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 92,
+      "winners": 84,
+      "losers": 8,
+      "net_pnl": 1819.2526859999984
+    },
+    "benchmark": {
+      "cash": 99696.8,
+      "available_cash": 99696.8,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.9449,
+      "realized_pnl": -303.2049,
+      "equity": 0.0,
+      "total": 99696.8,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -303.2,
+      "return_pct": -0.30320493800002346,
+      "max_drawdown_pct": 6.331187929502413,
+      "exposure_pct": 0.0,
+      "fills": 110,
+      "unrealized_pnl": 0,
+      "liquidation_value": 99696.8,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": 0.8724168912848158,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.04173843199077241,
+        "absolute_return_acf1": -0.011298782522511399,
+        "variance_ratio20": 2.9356297552353454,
+        "momentum_direction_accuracy": 0.8784982935153584,
+        "zero_return_fraction": 0.6582446808510638,
+        "excess_kurtosis": 9.70521696367126
+      },
+      "HELX": {
+        "return_acf1": 0.042361158448310635,
+        "absolute_return_acf1": 0.01149714370666874,
+        "variance_ratio20": 3.506533538244189,
+        "momentum_direction_accuracy": 0.8184300341296928,
+        "zero_return_fraction": 0.5465425531914894,
+        "excess_kurtosis": 5.79134194635118
+      },
+      "ATLS": {
+        "return_acf1": -0.033492877982556526,
+        "absolute_return_acf1": 0.08258730495121432,
+        "variance_ratio20": 2.7507765899637793,
+        "momentum_direction_accuracy": 0.8081911262798634,
+        "zero_return_fraction": 0.5611702127659575,
+        "excess_kurtosis": 9.72793086771055
+      },
+      "ORCA": {
+        "return_acf1": 0.02468821927646542,
+        "absolute_return_acf1": 0.0397496212480833,
+        "variance_ratio20": 3.4905989855797754,
+        "momentum_direction_accuracy": 0.8580204778156997,
+        "zero_return_fraction": 0.5930851063829787,
+        "excess_kurtosis": 6.236948803055974
+      },
+      "VANE": {
+        "return_acf1": 0.05263285049804365,
+        "absolute_return_acf1": -0.0008912954269542102,
+        "variance_ratio20": 2.2819909513941825,
+        "momentum_direction_accuracy": 0.8293515358361775,
+        "zero_return_fraction": 0.7539893617021277,
+        "excess_kurtosis": 13.051066612834209
+      },
+      "CIRR": {
+        "return_acf1": -0.04461288856134645,
+        "absolute_return_acf1": 0.04792260958381111,
+        "variance_ratio20": 1.5494943416722808,
+        "momentum_direction_accuracy": 0.7761092150170649,
+        "zero_return_fraction": 0.7313829787234043,
+        "excess_kurtosis": 20.796637127880572
+      }
+    },
+    "market_maker_pnl": -97058.21925200103
+  },
+  {
+    "seed": 302,
+    "duration": 1500,
+    "strategy": "model",
+    "sim_version": 2,
+    "model": "c886a66255b844af",
+    "agent": {
+      "cash": 101594.88,
+      "available_cash": 101594.88,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 17.226,
+      "realized_pnl": 1594.884,
+      "equity": 0.0,
+      "total": 101594.88,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": 1594.88,
+      "return_pct": 1.594883967000027,
+      "max_drawdown_pct": 0.023151679397270808,
+      "exposure_pct": 0.0,
+      "fills": 215,
+      "unrealized_pnl": 0,
+      "liquidation_value": 101594.88,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 72,
+      "winners": 62,
+      "losers": 10,
+      "net_pnl": 1594.8839669999975
+    },
+    "benchmark": {
+      "cash": 92107.3,
+      "available_cash": 92107.3,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.1884,
+      "realized_pnl": -7892.6984,
+      "equity": 0.0,
+      "total": 92107.3,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -7892.7,
+      "return_pct": -7.892698361000017,
+      "max_drawdown_pct": 10.437356010717613,
+      "exposure_pct": 0.0,
+      "fills": 97,
+      "unrealized_pnl": 0,
+      "liquidation_value": 92107.3,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": 0.8713804713804714,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.05046913559692932,
+        "absolute_return_acf1": 0.005947876464457112,
+        "variance_ratio20": 3.4161402895886948,
+        "momentum_direction_accuracy": 0.9195088676671214,
+        "zero_return_fraction": 0.5953488372093023,
+        "excess_kurtosis": 6.321750993097286
+      },
+      "HELX": {
+        "return_acf1": 0.06979394341252917,
+        "absolute_return_acf1": -0.0008895089008051331,
+        "variance_ratio20": 4.325071454925027,
+        "momentum_direction_accuracy": 0.844474761255116,
+        "zero_return_fraction": 0.5581395348837209,
+        "excess_kurtosis": 4.034006035873859
+      },
+      "ATLS": {
+        "return_acf1": -0.00918616730742764,
+        "absolute_return_acf1": 0.047965150862428044,
+        "variance_ratio20": 3.369761638297291,
+        "momentum_direction_accuracy": 0.8090040927694406,
+        "zero_return_fraction": 0.5441860465116279,
+        "excess_kurtosis": 6.396350449726624
+      },
+      "ORCA": {
+        "return_acf1": 0.03811492813367108,
+        "absolute_return_acf1": 0.0002544738526057863,
+        "variance_ratio20": 3.277967661362411,
+        "momentum_direction_accuracy": 0.8485675306957708,
+        "zero_return_fraction": 0.53421926910299,
+        "excess_kurtosis": 7.775912523100063
+      },
+      "VANE": {
+        "return_acf1": -0.012989748339602479,
+        "absolute_return_acf1": -0.013762385364397094,
+        "variance_ratio20": 2.0410031909271567,
+        "momentum_direction_accuracy": 0.703956343792633,
+        "zero_return_fraction": 0.6830564784053156,
+        "excess_kurtosis": 14.956493611059233
+      },
+      "CIRR": {
+        "return_acf1": -0.00603361734134972,
+        "absolute_return_acf1": 0.02564707172203947,
+        "variance_ratio20": 1.864435445356506,
+        "momentum_direction_accuracy": 0.8226466575716235,
+        "zero_return_fraction": 0.7900332225913621,
+        "excess_kurtosis": 13.588624064375473
+      }
+    },
+    "market_maker_pnl": -146755.27336398978
+  },
+  {
+    "seed": 303,
+    "duration": 1500,
+    "strategy": "model",
+    "sim_version": 2,
+    "model": "c886a66255b844af",
+    "agent": {
+      "cash": 102361.21,
+      "available_cash": 102361.21,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 24.3005,
+      "realized_pnl": 2361.2095,
+      "equity": 0.0,
+      "total": 102361.21,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": 2361.21,
+      "return_pct": 2.361209506999984,
+      "max_drawdown_pct": 0.05013710102123037,
+      "exposure_pct": 0.0,
+      "fills": 255,
+      "unrealized_pnl": 0,
+      "liquidation_value": 102361.21,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 93,
+      "winners": 88,
+      "losers": 5,
+      "net_pnl": 2361.2095070000014
+    },
+    "benchmark": {
+      "cash": 102764.66,
+      "available_cash": 102764.66,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.232,
+      "realized_pnl": 2764.658,
+      "equity": 0.0,
+      "total": 102764.66,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 2764.66,
+      "return_pct": 2.7646580070000093,
+      "max_drawdown_pct": 2.9143933004720846,
+      "exposure_pct": 0.0,
+      "fills": 78,
+      "unrealized_pnl": 0,
+      "liquidation_value": 102764.66,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": 0.848138178555406,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.011671217674064335,
+        "absolute_return_acf1": 0.029279413888217448,
+        "variance_ratio20": 3.050210427538055,
+        "momentum_direction_accuracy": 0.8214042263122018,
+        "zero_return_fraction": 0.5597609561752988,
+        "excess_kurtosis": 7.177840057030274
+      },
+      "HELX": {
+        "return_acf1": 0.03313905606419869,
+        "absolute_return_acf1": 0.06341113960117524,
+        "variance_ratio20": 2.399627377835583,
+        "momentum_direction_accuracy": 0.83640081799591,
+        "zero_return_fraction": 0.5644090305444888,
+        "excess_kurtosis": 7.189658112960064
+      },
+      "ATLS": {
+        "return_acf1": 0.022929838632593888,
+        "absolute_return_acf1": 0.010014501306597439,
+        "variance_ratio20": 3.608313740682883,
+        "momentum_direction_accuracy": 0.8561690524880708,
+        "zero_return_fraction": 0.5385126162018592,
+        "excess_kurtosis": 4.880902078924966
+      },
+      "ORCA": {
+        "return_acf1": -0.026614698927864937,
+        "absolute_return_acf1": 0.05372168631108537,
+        "variance_ratio20": 3.477505024317988,
+        "momentum_direction_accuracy": 0.787321063394683,
+        "zero_return_fraction": 0.5126162018592297,
+        "excess_kurtosis": 5.141804530774625
+      },
+      "VANE": {
+        "return_acf1": -0.015121228025371247,
+        "absolute_return_acf1": -0.013751346034008018,
+        "variance_ratio20": 2.777177989015686,
+        "momentum_direction_accuracy": 0.825494205862304,
+        "zero_return_fraction": 0.651394422310757,
+        "excess_kurtosis": 7.420953444876835
+      },
+      "CIRR": {
+        "return_acf1": 0.024686178288684617,
+        "absolute_return_acf1": 0.04631743800340888,
+        "variance_ratio20": 1.9098078535410623,
+        "momentum_direction_accuracy": 0.7191547375596455,
+        "zero_return_fraction": 0.7815405046480743,
+        "excess_kurtosis": 15.636567913253621
+      }
+    },
+    "market_maker_pnl": -112878.89666300104
+  },
+  {
+    "seed": 301,
+    "duration": 1500,
+    "strategy": "momentum",
+    "sim_version": 2,
+    "model": "control:momentum",
+    "agent": {
+      "cash": 99461.33,
+      "available_cash": 99461.33,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 41.0557,
+      "realized_pnl": -538.6657,
+      "equity": 0.0,
+      "total": 99461.33,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -538.67,
+      "return_pct": -0.5386656710000381,
+      "max_drawdown_pct": 1.0276557849955403,
+      "exposure_pct": 0.0,
+      "fills": 351,
+      "unrealized_pnl": 0,
+      "liquidation_value": 99461.33,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 117,
+      "winners": 87,
+      "losers": 30,
+      "net_pnl": -538.6656709999959
+    },
+    "benchmark": {
+      "cash": 100678.44,
+      "available_cash": 100678.44,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.0217,
+      "realized_pnl": 678.4383,
+      "equity": 0.0,
+      "total": 100678.44,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 678.44,
+      "return_pct": 0.6784382600000471,
+      "max_drawdown_pct": 6.688872794285294,
+      "exposure_pct": 0.0,
+      "fills": 86,
+      "unrealized_pnl": 0,
+      "liquidation_value": 100678.44,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.01292194920863145,
+        "absolute_return_acf1": 0.030193587147031575,
+        "variance_ratio20": 2.3469306302167525,
+        "momentum_direction_accuracy": 0.7939972714870396,
+        "zero_return_fraction": 0.6697674418604651,
+        "excess_kurtosis": 10.558830757716406
+      },
+      "HELX": {
+        "return_acf1": 0.06826923497915262,
+        "absolute_return_acf1": 0.0774556388930636,
+        "variance_ratio20": 3.4650867899604667,
+        "momentum_direction_accuracy": 0.8458390177353342,
+        "zero_return_fraction": 0.520265780730897,
+        "excess_kurtosis": 5.702042277223665
+      },
+      "ATLS": {
+        "return_acf1": 0.022342386110814915,
+        "absolute_return_acf1": 0.008741681672912335,
+        "variance_ratio20": 2.937937483905002,
+        "momentum_direction_accuracy": 0.8124147339699863,
+        "zero_return_fraction": 0.5548172757475083,
+        "excess_kurtosis": 7.601022020069468
+      },
+      "ORCA": {
+        "return_acf1": 0.028269128852328677,
+        "absolute_return_acf1": 0.011720066430296674,
+        "variance_ratio20": 2.996330405990554,
+        "momentum_direction_accuracy": 0.7517053206002728,
+        "zero_return_fraction": 0.59734219269103,
+        "excess_kurtosis": 9.020158978903082
+      },
+      "VANE": {
+        "return_acf1": 0.01546828235487897,
+        "absolute_return_acf1": -0.027544684498471368,
+        "variance_ratio20": 2.12112115441962,
+        "momentum_direction_accuracy": 0.7660300136425648,
+        "zero_return_fraction": 0.7315614617940199,
+        "excess_kurtosis": 11.525221260289472
+      },
+      "CIRR": {
+        "return_acf1": -0.004049755956789747,
+        "absolute_return_acf1": 0.03826848934213932,
+        "variance_ratio20": 2.255356412185234,
+        "momentum_direction_accuracy": 0.8390177353342428,
+        "zero_return_fraction": 0.720265780730897,
+        "excess_kurtosis": 12.696592363623171
+      }
+    },
+    "market_maker_pnl": -96973.04250699538
+  },
+  {
+    "seed": 302,
+    "duration": 1500,
+    "strategy": "momentum",
+    "sim_version": 2,
+    "model": "control:momentum",
+    "agent": {
+      "cash": 99024.84,
+      "available_cash": 99024.84,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 46.1363,
+      "realized_pnl": -975.1563,
+      "equity": 0.0,
+      "total": 99024.84,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -975.16,
+      "return_pct": -0.975156341999972,
+      "max_drawdown_pct": 1.7821973268626556,
+      "exposure_pct": 0.0,
+      "fills": 320,
+      "unrealized_pnl": 0,
+      "liquidation_value": 99024.84,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 107,
+      "winners": 80,
+      "losers": 27,
+      "net_pnl": -975.1563419999942
+    },
+    "benchmark": {
+      "cash": 97126.24,
+      "available_cash": 97126.24,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.647,
+      "realized_pnl": -2873.757,
+      "equity": 0.0,
+      "total": 97126.24,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -2873.76,
+      "return_pct": -2.8737569510000283,
+      "max_drawdown_pct": 9.496051552759777,
+      "exposure_pct": 0.0,
+      "fills": 94,
+      "unrealized_pnl": 0,
+      "liquidation_value": 97126.24,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.09444884446870343,
+        "absolute_return_acf1": 0.00949064087604448,
+        "variance_ratio20": 3.8155072715746314,
+        "momentum_direction_accuracy": 0.8799454297407913,
+        "zero_return_fraction": 0.5448504983388704,
+        "excess_kurtosis": 6.756868664639704
+      },
+      "HELX": {
+        "return_acf1": 0.08432102761313731,
+        "absolute_return_acf1": 0.016534078692588206,
+        "variance_ratio20": 3.7549628176765255,
+        "momentum_direction_accuracy": 0.8417462482946794,
+        "zero_return_fraction": 0.574750830564784,
+        "excess_kurtosis": 7.216533389035021
+      },
+      "ATLS": {
+        "return_acf1": 0.021722720314095823,
+        "absolute_return_acf1": 0.052906943438481784,
+        "variance_ratio20": 3.4299111958214215,
+        "momentum_direction_accuracy": 0.844474761255116,
+        "zero_return_fraction": 0.5627906976744186,
+        "excess_kurtosis": 8.199569302620187
+      },
+      "ORCA": {
+        "return_acf1": 0.11614438527959102,
+        "absolute_return_acf1": 0.005762166395139228,
+        "variance_ratio20": 4.316479243831338,
+        "momentum_direction_accuracy": 0.8321964529331515,
+        "zero_return_fraction": 0.5169435215946844,
+        "excess_kurtosis": 5.797277936686145
+      },
+      "VANE": {
+        "return_acf1": 0.0037625928717299434,
+        "absolute_return_acf1": -0.012153090991069114,
+        "variance_ratio20": 2.296088765100524,
+        "momentum_direction_accuracy": 0.8799454297407913,
+        "zero_return_fraction": 0.6770764119601329,
+        "excess_kurtosis": 9.179621148762216
+      },
+      "CIRR": {
+        "return_acf1": -0.024459558794060136,
+        "absolute_return_acf1": 0.035590437943818845,
+        "variance_ratio20": 1.7495262085107177,
+        "momentum_direction_accuracy": 0.6425648021828103,
+        "zero_return_fraction": 0.7508305647840532,
+        "excess_kurtosis": 17.443605059073793
+      }
+    },
+    "market_maker_pnl": -113016.74640399031
+  },
+  {
+    "seed": 303,
+    "duration": 1500,
+    "strategy": "momentum",
+    "sim_version": 2,
+    "model": "control:momentum",
+    "agent": {
+      "cash": 99868.76,
+      "available_cash": 99868.76,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 46.411,
+      "realized_pnl": -131.241,
+      "equity": 0.0,
+      "total": 99868.76,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -131.24,
+      "return_pct": -0.13124103500006257,
+      "max_drawdown_pct": 1.4380636256218549,
+      "exposure_pct": 0.0,
+      "fills": 369,
+      "unrealized_pnl": 0,
+      "liquidation_value": 99868.76,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 120,
+      "winners": 99,
+      "losers": 21,
+      "net_pnl": -131.24103500000422
+    },
+    "benchmark": {
+      "cash": 103058.22,
+      "available_cash": 103058.22,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.2755,
+      "realized_pnl": 3058.2245,
+      "equity": 0.0,
+      "total": 103058.22,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 3058.22,
+      "return_pct": 3.0582245220000415,
+      "max_drawdown_pct": 6.3508822749486775,
+      "exposure_pct": 0.0,
+      "fills": 91,
+      "unrealized_pnl": 0,
+      "liquidation_value": 103058.22,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": -0.0003351608863957262,
+        "absolute_return_acf1": 0.041511398915075826,
+        "variance_ratio20": 2.500589284901527,
+        "momentum_direction_accuracy": 0.7855191256830601,
+        "zero_return_fraction": 0.5602129075182968,
+        "excess_kurtosis": 8.283653543116992
+      },
+      "HELX": {
+        "return_acf1": 0.05672500174709661,
+        "absolute_return_acf1": 0.04516467947295552,
+        "variance_ratio20": 3.8637219458774776,
+        "momentum_direction_accuracy": 0.8920765027322405,
+        "zero_return_fraction": 0.5602129075182968,
+        "excess_kurtosis": 7.058621551935447
+      },
+      "ATLS": {
+        "return_acf1": -0.07549706207524742,
+        "absolute_return_acf1": 0.1158077816215526,
+        "variance_ratio20": 3.1756494963357915,
+        "momentum_direction_accuracy": 0.8258196721311475,
+        "zero_return_fraction": 0.5209580838323353,
+        "excess_kurtosis": 5.784951395607758
+      },
+      "ORCA": {
+        "return_acf1": 0.038527019822608734,
+        "absolute_return_acf1": 0.02693421508205423,
+        "variance_ratio20": 3.845580736800549,
+        "momentum_direction_accuracy": 0.8538251366120219,
+        "zero_return_fraction": 0.5129740518962076,
+        "excess_kurtosis": 5.278953771839658
+      },
+      "VANE": {
+        "return_acf1": -0.001778619390054156,
+        "absolute_return_acf1": -0.029055661998485076,
+        "variance_ratio20": 2.5948900623297377,
+        "momentum_direction_accuracy": 0.7909836065573771,
+        "zero_return_fraction": 0.6294078509647372,
+        "excess_kurtosis": 7.0673624284144445
+      },
+      "CIRR": {
+        "return_acf1": 0.006566912660871024,
+        "absolute_return_acf1": 0.01923707724014807,
+        "variance_ratio20": 2.158098742175906,
+        "momentum_direction_accuracy": 0.726775956284153,
+        "zero_return_fraction": 0.7638057218895542,
+        "excess_kurtosis": 13.61579034031427
+      }
+    },
+    "market_maker_pnl": -97294.23836899479
+  },
+  {
+    "seed": 301,
+    "duration": 1500,
+    "strategy": "random",
+    "sim_version": 2,
+    "model": "control:random",
+    "agent": {
+      "cash": 91960.25,
+      "available_cash": 91960.25,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 123.2305,
+      "realized_pnl": -8039.7505,
+      "equity": 0.0,
+      "total": 91960.25,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -8039.75,
+      "return_pct": -8.0397505379999,
+      "max_drawdown_pct": 8.225431087875656,
+      "exposure_pct": 0.0,
+      "fills": 602,
+      "unrealized_pnl": 0,
+      "liquidation_value": 91960.25,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 172,
+      "winners": 67,
+      "losers": 105,
+      "net_pnl": -8039.75053800001
+    },
+    "benchmark": {
+      "cash": 103895.38,
+      "available_cash": 103895.38,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.3567,
+      "realized_pnl": 3895.3833,
+      "equity": 0.0,
+      "total": 103895.38,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 3895.38,
+      "return_pct": 3.8953833000000104,
+      "max_drawdown_pct": 9.810665165882105,
+      "exposure_pct": 0.0,
+      "fills": 86,
+      "unrealized_pnl": 0,
+      "liquidation_value": 103895.38,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.017083484679103044,
+        "absolute_return_acf1": 0.029877894433355392,
+        "variance_ratio20": 2.796151050096112,
+        "momentum_direction_accuracy": 0.8852459016393442,
+        "zero_return_fraction": 0.6640053226879574,
+        "excess_kurtosis": 11.039129934252818
+      },
+      "HELX": {
+        "return_acf1": -0.05663842280476794,
+        "absolute_return_acf1": 0.09156279844752416,
+        "variance_ratio20": 2.3493399084711997,
+        "momentum_direction_accuracy": 0.7281420765027322,
+        "zero_return_fraction": 0.5362608117099135,
+        "excess_kurtosis": 9.739010993864033
+      },
+      "ATLS": {
+        "return_acf1": 0.057861459498503014,
+        "absolute_return_acf1": 0.040696342335031235,
+        "variance_ratio20": 3.1877384489607405,
+        "momentum_direction_accuracy": 0.7827868852459017,
+        "zero_return_fraction": 0.5655355954757152,
+        "excess_kurtosis": 6.336613929438164
+      },
+      "ORCA": {
+        "return_acf1": -0.0020237672271982412,
+        "absolute_return_acf1": 0.004412611346095869,
+        "variance_ratio20": 2.319673705304299,
+        "momentum_direction_accuracy": 0.8032786885245902,
+        "zero_return_fraction": 0.573519627411843,
+        "excess_kurtosis": 17.955014934293693
+      },
+      "VANE": {
+        "return_acf1": -0.05196128530337685,
+        "absolute_return_acf1": 0.08109733705169445,
+        "variance_ratio20": 2.021443543897905,
+        "momentum_direction_accuracy": 0.8060109289617486,
+        "zero_return_fraction": 0.7139055222887558,
+        "excess_kurtosis": 14.271552809750716
+      },
+      "CIRR": {
+        "return_acf1": 0.052415416290285594,
+        "absolute_return_acf1": 0.0006558639284200054,
+        "variance_ratio20": 2.702636283382363,
+        "momentum_direction_accuracy": 0.8387978142076503,
+        "zero_return_fraction": 0.7005988023952096,
+        "excess_kurtosis": 9.91258145983349
+      }
+    },
+    "market_maker_pnl": -81588.0932480013
+  },
+  {
+    "seed": 302,
+    "duration": 1500,
+    "strategy": "random",
+    "sim_version": 2,
+    "model": "control:random",
+    "agent": {
+      "cash": 91775.66,
+      "available_cash": 91775.66,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 91.928,
+      "realized_pnl": -8224.338,
+      "equity": 0.0,
+      "total": 91775.66,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -8224.34,
+      "return_pct": -8.224338034999946,
+      "max_drawdown_pct": 8.331245605120907,
+      "exposure_pct": 0.0,
+      "fills": 433,
+      "unrealized_pnl": 0,
+      "liquidation_value": 91775.66,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 114,
+      "winners": 41,
+      "losers": 73,
+      "net_pnl": -8224.338035
+    },
+    "benchmark": {
+      "cash": 99303.69,
+      "available_cash": 99303.69,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.8903,
+      "realized_pnl": -696.3103,
+      "equity": 0.0,
+      "total": 99303.69,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -696.31,
+      "return_pct": -0.6963103320000386,
+      "max_drawdown_pct": 5.939857685360749,
+      "exposure_pct": 0.0,
+      "fills": 75,
+      "unrealized_pnl": 0,
+      "liquidation_value": 99303.69,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": -0.031244902896598106,
+        "absolute_return_acf1": 0.08078742633126137,
+        "variance_ratio20": 2.2370013854020523,
+        "momentum_direction_accuracy": 0.732788002726653,
+        "zero_return_fraction": 0.5776892430278885,
+        "excess_kurtosis": 7.854026984009339
+      },
+      "HELX": {
+        "return_acf1": 0.016424306346132022,
+        "absolute_return_acf1": 0.021024245382007412,
+        "variance_ratio20": 3.326027295819937,
+        "momentum_direction_accuracy": 0.8282208588957055,
+        "zero_return_fraction": 0.5577689243027888,
+        "excess_kurtosis": 5.544151907762238
+      },
+      "ATLS": {
+        "return_acf1": 0.05101524952000833,
+        "absolute_return_acf1": 0.0279865883751878,
+        "variance_ratio20": 3.5541911419451186,
+        "momentum_direction_accuracy": 0.8214042263122018,
+        "zero_return_fraction": 0.5863213811420983,
+        "excess_kurtosis": 7.253486214200832
+      },
+      "ORCA": {
+        "return_acf1": 0.04912451972869593,
+        "absolute_return_acf1": 0.00759153675295438,
+        "variance_ratio20": 3.9796488037880646,
+        "momentum_direction_accuracy": 0.8350374914792092,
+        "zero_return_fraction": 0.4940239043824701,
+        "excess_kurtosis": 5.0735453041344805
+      },
+      "VANE": {
+        "return_acf1": -0.0024950645900051137,
+        "absolute_return_acf1": 0.0607306848004651,
+        "variance_ratio20": 1.9744060613210033,
+        "momentum_direction_accuracy": 0.78186775732788,
+        "zero_return_fraction": 0.6985391766268261,
+        "excess_kurtosis": 11.152354421432422
+      },
+      "CIRR": {
+        "return_acf1": -0.005004043175957358,
+        "absolute_return_acf1": 0.05077074641541729,
+        "variance_ratio20": 1.692789828443569,
+        "momentum_direction_accuracy": 0.8602590320381731,
+        "zero_return_fraction": 0.7456839309428951,
+        "excess_kurtosis": 15.39861687395167
+      }
+    },
+    "market_maker_pnl": -122901.23930600472
+  },
+  {
+    "seed": 303,
+    "duration": 1500,
+    "strategy": "random",
+    "sim_version": 2,
+    "model": "control:random",
+    "agent": {
+      "cash": 91955.64,
+      "available_cash": 91955.64,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 97.116,
+      "realized_pnl": -8044.356,
+      "equity": 0.0,
+      "total": 91955.64,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -8044.36,
+      "return_pct": -8.044356032000088,
+      "max_drawdown_pct": 8.454633027396618,
+      "exposure_pct": 0.0,
+      "fills": 483,
+      "unrealized_pnl": 0,
+      "liquidation_value": 91955.64,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 120,
+      "winners": 51,
+      "losers": 68,
+      "net_pnl": -8044.3560319999915
+    },
+    "benchmark": {
+      "cash": 101877.46,
+      "available_cash": 101877.46,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.1509,
+      "realized_pnl": 1877.4591,
+      "equity": 0.0,
+      "total": 101877.46,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 1877.46,
+      "return_pct": 1.8774591330000145,
+      "max_drawdown_pct": 6.8215371810820375,
+      "exposure_pct": 0.0,
+      "fills": 77,
+      "unrealized_pnl": 0,
+      "liquidation_value": 101877.46,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.04071271633287276,
+        "absolute_return_acf1": 0.045001717199852326,
+        "variance_ratio20": 3.205691021585335,
+        "momentum_direction_accuracy": 0.8650306748466258,
+        "zero_return_fraction": 0.5737051792828686,
+        "excess_kurtosis": 7.0368730924337
+      },
+      "HELX": {
+        "return_acf1": -0.08038716689307397,
+        "absolute_return_acf1": 0.10956233437140565,
+        "variance_ratio20": 2.4430698909395923,
+        "momentum_direction_accuracy": 0.8568507157464212,
+        "zero_return_fraction": 0.5743691899070386,
+        "excess_kurtosis": 19.90067783794152
+      },
+      "ATLS": {
+        "return_acf1": 0.06690753117458043,
+        "absolute_return_acf1": 0.0512949483526221,
+        "variance_ratio20": 3.380350965965334,
+        "momentum_direction_accuracy": 0.847307430129516,
+        "zero_return_fraction": 0.48406374501992033,
+        "excess_kurtosis": 5.850541601883913
+      },
+      "ORCA": {
+        "return_acf1": 0.06395003124757564,
+        "absolute_return_acf1": 0.07818207333613844,
+        "variance_ratio20": 3.5889490817989165,
+        "momentum_direction_accuracy": 0.8016359918200409,
+        "zero_return_fraction": 0.5066401062416999,
+        "excess_kurtosis": 8.975872918126592
+      },
+      "VANE": {
+        "return_acf1": 0.05032872024773618,
+        "absolute_return_acf1": 0.012675626905318168,
+        "variance_ratio20": 2.4825904086753106,
+        "momentum_direction_accuracy": 0.7586912065439673,
+        "zero_return_fraction": 0.6354581673306773,
+        "excess_kurtosis": 6.188062869158113
+      },
+      "CIRR": {
+        "return_acf1": 0.012550796243440862,
+        "absolute_return_acf1": 0.021122611984749184,
+        "variance_ratio20": 1.3467347312809173,
+        "momentum_direction_accuracy": 0.7246080436264485,
+        "zero_return_fraction": 0.7822045152722443,
+        "excess_kurtosis": 20.672801343651127
+      }
+    },
+    "market_maker_pnl": -162739.42208399973
+  },
+  {
+    "seed": 301,
+    "duration": 1500,
+    "strategy": "always_buy",
+    "sim_version": 2,
+    "model": "control:always_buy",
+    "agent": {
+      "cash": 92062.37,
+      "available_cash": 92062.37,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 91.0509,
+      "realized_pnl": -7937.6309,
+      "equity": 0.0,
+      "total": 92062.37,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -7937.63,
+      "return_pct": -7.937630895999959,
+      "max_drawdown_pct": 8.320036275889986,
+      "exposure_pct": 0.0,
+      "fills": 413,
+      "unrealized_pnl": 0,
+      "liquidation_value": 92062.37,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 106,
+      "winners": 50,
+      "losers": 56,
+      "net_pnl": -7937.630895999998
+    },
+    "benchmark": {
+      "cash": 92439.63,
+      "available_cash": 92439.63,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.2009,
+      "realized_pnl": -7560.3709,
+      "equity": 0.0,
+      "total": 92439.63,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -7560.37,
+      "return_pct": -7.560370904999991,
+      "max_drawdown_pct": 10.963646861728304,
+      "exposure_pct": 0.0,
+      "fills": 71,
+      "unrealized_pnl": 0,
+      "liquidation_value": 92439.63,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.049226256585955454,
+        "absolute_return_acf1": -0.03769552041744653,
+        "variance_ratio20": 2.36796926924801,
+        "momentum_direction_accuracy": 0.8758526603001364,
+        "zero_return_fraction": 0.6651162790697674,
+        "excess_kurtosis": 10.771202950788183
+      },
+      "HELX": {
+        "return_acf1": 0.10366337911070478,
+        "absolute_return_acf1": 0.02920316761046803,
+        "variance_ratio20": 3.4411427725924275,
+        "momentum_direction_accuracy": 0.8581173260572987,
+        "zero_return_fraction": 0.5322259136212625,
+        "excess_kurtosis": 6.942898870633732
+      },
+      "ATLS": {
+        "return_acf1": 0.03726172714103341,
+        "absolute_return_acf1": 0.020834009977416013,
+        "variance_ratio20": 3.3113104334348242,
+        "momentum_direction_accuracy": 0.7858117326057299,
+        "zero_return_fraction": 0.5574750830564784,
+        "excess_kurtosis": 4.779566288225877
+      },
+      "ORCA": {
+        "return_acf1": 0.025145248828042213,
+        "absolute_return_acf1": 0.02495743105219842,
+        "variance_ratio20": 3.168809640820517,
+        "momentum_direction_accuracy": 0.7858117326057299,
+        "zero_return_fraction": 0.5581395348837209,
+        "excess_kurtosis": 7.224933880382665
+      },
+      "VANE": {
+        "return_acf1": -0.01080669873465545,
+        "absolute_return_acf1": 0.0622101198690948,
+        "variance_ratio20": 1.791213375242385,
+        "momentum_direction_accuracy": 0.8485675306957708,
+        "zero_return_fraction": 0.7421926910299004,
+        "excess_kurtosis": 18.678893311234194
+      },
+      "CIRR": {
+        "return_acf1": 0.0072479194063805276,
+        "absolute_return_acf1": 0.02892352576791326,
+        "variance_ratio20": 2.219576743668111,
+        "momentum_direction_accuracy": 0.7748976807639836,
+        "zero_return_fraction": 0.7335548172757476,
+        "excess_kurtosis": 12.346243520161238
+      }
+    },
+    "market_maker_pnl": -97872.11525999452
+  },
+  {
+    "seed": 302,
+    "duration": 1500,
+    "strategy": "always_buy",
+    "sim_version": 2,
+    "model": "control:always_buy",
+    "agent": {
+      "cash": 92616.63,
+      "available_cash": 92616.63,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 92.8199,
+      "realized_pnl": -7383.3699,
+      "equity": 0.0,
+      "total": 92616.63,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -7383.37,
+      "return_pct": -7.383369903000014,
+      "max_drawdown_pct": 8.005668436911717,
+      "exposure_pct": 0.0,
+      "fills": 461,
+      "unrealized_pnl": 0,
+      "liquidation_value": 92616.63,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 134,
+      "winners": 70,
+      "losers": 64,
+      "net_pnl": -7383.369902999999
+    },
+    "benchmark": {
+      "cash": 103572.29,
+      "available_cash": 103572.29,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 12.3275,
+      "realized_pnl": 3572.2925,
+      "equity": 0.0,
+      "total": 103572.29,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": 3572.29,
+      "return_pct": 3.572292518000042,
+      "max_drawdown_pct": 4.2292927826987015,
+      "exposure_pct": 0.0,
+      "fills": 86,
+      "unrealized_pnl": 0,
+      "liquidation_value": 103572.29,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.06468789057194625,
+        "absolute_return_acf1": 0.03898442866345697,
+        "variance_ratio20": 3.867125229936694,
+        "momentum_direction_accuracy": 0.8173142467620995,
+        "zero_return_fraction": 0.5756972111553785,
+        "excess_kurtosis": 6.815964774692981
+      },
+      "HELX": {
+        "return_acf1": 0.0422378802018238,
+        "absolute_return_acf1": 0.11313816834885601,
+        "variance_ratio20": 2.939798044199964,
+        "momentum_direction_accuracy": 0.8214042263122018,
+        "zero_return_fraction": 0.547808764940239,
+        "excess_kurtosis": 7.616526055704888
+      },
+      "ATLS": {
+        "return_acf1": 0.06288370572326919,
+        "absolute_return_acf1": 0.02061818538656864,
+        "variance_ratio20": 3.5373698893212033,
+        "momentum_direction_accuracy": 0.8050443081117927,
+        "zero_return_fraction": 0.5517928286852589,
+        "excess_kurtosis": 4.657388557728575
+      },
+      "ORCA": {
+        "return_acf1": -0.01425201120655817,
+        "absolute_return_acf1": 0.06407968906937142,
+        "variance_ratio20": 2.567398315899053,
+        "momentum_direction_accuracy": 0.8227675528289026,
+        "zero_return_fraction": 0.50066401062417,
+        "excess_kurtosis": 7.846586404841931
+      },
+      "VANE": {
+        "return_acf1": 0.007164635996950572,
+        "absolute_return_acf1": 0.023253687749087943,
+        "variance_ratio20": 2.147966178924589,
+        "momentum_direction_accuracy": 0.7968643490115883,
+        "zero_return_fraction": 0.6792828685258964,
+        "excess_kurtosis": 9.169919330671632
+      },
+      "CIRR": {
+        "return_acf1": 0.003252405047966499,
+        "absolute_return_acf1": 0.05047144855819693,
+        "variance_ratio20": 1.8162197835039178,
+        "momentum_direction_accuracy": 0.7757327880027266,
+        "zero_return_fraction": 0.748339973439575,
+        "excess_kurtosis": 12.874104156973821
+      }
+    },
+    "market_maker_pnl": -155453.30784100783
+  },
+  {
+    "seed": 303,
+    "duration": 1500,
+    "strategy": "always_buy",
+    "sim_version": 2,
+    "model": "control:always_buy",
+    "agent": {
+      "cash": 92180.41,
+      "available_cash": 92180.41,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 64.9771,
+      "realized_pnl": -7819.5871,
+      "equity": 0.0,
+      "total": 92180.41,
+      "id": "ATLAS",
+      "initial": 100000,
+      "net_pnl": -7819.59,
+      "return_pct": -7.819587145000018,
+      "max_drawdown_pct": 8.087628256277712,
+      "exposure_pct": 0.0,
+      "fills": 302,
+      "unrealized_pnl": 0,
+      "liquidation_value": 92180.41,
+      "illiquid_shares": 0
+    },
+    "round_trips": {
+      "closed": 76,
+      "winners": 40,
+      "losers": 35,
+      "net_pnl": -7819.587144999988
+    },
+    "benchmark": {
+      "cash": 98043.53,
+      "available_cash": 98043.53,
+      "fee_bps": 1.0,
+      "orders": [],
+      "positions": [],
+      "fees": 11.7595,
+      "realized_pnl": -1956.4695,
+      "equity": 0.0,
+      "total": 98043.53,
+      "id": "HOLD",
+      "initial": 100000,
+      "net_pnl": -1956.47,
+      "return_pct": -1.9564695429999945,
+      "max_drawdown_pct": 11.017981312095959,
+      "exposure_pct": 0.0,
+      "fills": 81,
+      "unrealized_pnl": 0,
+      "liquidation_value": 98043.53,
+      "illiquid_shares": 0
+    },
+    "model_accuracy": null,
+    "dynamics": {
+      "NOVA": {
+        "return_acf1": 0.01258155089750714,
+        "absolute_return_acf1": 0.08605898552746906,
+        "variance_ratio20": 3.456572864588406,
+        "momentum_direction_accuracy": 0.8738922972051807,
+        "zero_return_fraction": 0.5617529880478087,
+        "excess_kurtosis": 6.509785513281207
+      },
+      "HELX": {
+        "return_acf1": 0.04842766172914321,
+        "absolute_return_acf1": 0.02586317830144797,
+        "variance_ratio20": 3.738217952865391,
+        "momentum_direction_accuracy": 0.8779822767552828,
+        "zero_return_fraction": 0.5723771580345286,
+        "excess_kurtosis": 6.3856408021330395
+      },
+      "ATLS": {
+        "return_acf1": 0.07649944000803106,
+        "absolute_return_acf1": 0.04734286197899125,
+        "variance_ratio20": 3.901768819505073,
+        "momentum_direction_accuracy": 0.8466257668711656,
+        "zero_return_fraction": 0.5298804780876494,
+        "excess_kurtosis": 6.05203063897439
+      },
+      "ORCA": {
+        "return_acf1": 0.028004068819679276,
+        "absolute_return_acf1": 0.01154675390014585,
+        "variance_ratio20": 3.2512143500656876,
+        "momentum_direction_accuracy": 0.7743694614860259,
+        "zero_return_fraction": 0.5265604249667994,
+        "excess_kurtosis": 6.346812163583184
+      },
+      "VANE": {
+        "return_acf1": 0.01862160201435014,
+        "absolute_return_acf1": 0.007901435275295883,
+        "variance_ratio20": 2.742675983845695,
+        "momentum_direction_accuracy": 0.8568507157464212,
+        "zero_return_fraction": 0.6600265604249668,
+        "excess_kurtosis": 7.112175728627015
+      },
+      "CIRR": {
+        "return_acf1": -0.013454373476856036,
+        "absolute_return_acf1": 0.039191243959162694,
+        "variance_ratio20": 2.1565515765235412,
+        "momentum_direction_accuracy": 0.830947511929107,
+        "zero_return_fraction": 0.747675962815405,
+        "excess_kurtosis": 17.190987164121942
+      }
+    },
+    "market_maker_pnl": -118622.19950600155
+  }
+]

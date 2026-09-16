@@ -33,14 +33,28 @@ ORACLE_COLS = [
 ]
 
 META_COLS = ["seed", "tick", "symbol", "horizon", "sim_version"]
+PRICE_COLS = OBSERVABLE_COLS[:9]
+
+
+def price_row(prices: np.ndarray) -> dict:
+    """Causal price-only inputs shared by synthetic and historical forecasts."""
+    last = float(prices[-1])
+    w = prices[-WINDOW:]
+    logrets = np.diff(np.log(w))
+    return {
+        **{f"ret_{k}": last / float(prices[-1 - k]) - 1 for k in LAGS},
+        "logret_1": float(np.log(last / float(prices[-2]))),
+        "vol_w": float(logrets.std()) if logrets.size else 0.0,
+        "mom_w": last / float(w[0]) - 1,
+        "ma_gap": last / float(w.mean()) - 1,
+        "hl_range": (float(w.max()) - float(w.min())) / last,
+    }
 
 
 def observable_row(prices: np.ndarray, depth: dict, spread: float | None,
                    flow: list[int], public_fair: float) -> dict:
     """prices: recent price array, most-recent last, length >= HISTORY."""
     last = float(prices[-1])
-    w = prices[-WINDOW:]
-    logrets = np.diff(np.log(w))
     bid_depth = float(sum(q for _, q in depth.get("bids", [])))
     ask_depth = float(sum(q for _, q in depth.get("asks", [])))
     buy, sell = flow
@@ -49,12 +63,7 @@ def observable_row(prices: np.ndarray, depth: dict, spread: float | None,
     ap, aq = asks[0] if asks else (last, 0)
     micro = (ap * bq + bp * aq) / (bq + aq) if bq and aq else last
     return {
-        **{f"ret_{k}": last / float(prices[-1 - k]) - 1 for k in LAGS},
-        "logret_1": float(np.log(last / float(prices[-2]))),
-        "vol_w": float(logrets.std()) if logrets.size else 0.0,
-        "mom_w": last / float(w[0]) - 1,
-        "ma_gap": last / float(w.mean()) - 1,
-        "hl_range": (float(w.max()) - float(w.min())) / last,
+        **price_row(prices),
         "spread_rel": (spread / last) if spread else 0.0,
         "book_imb": (bid_depth - ask_depth) / (bid_depth + ask_depth + 1),
         "bid_depth": bid_depth,

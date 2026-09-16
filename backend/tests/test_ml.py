@@ -1,4 +1,5 @@
 """Causal targets, disjoint evaluation, execution costs, and live horizon scoring."""
+import copy
 import joblib
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from app.engine.simulation import SimEngine
 from ml.features import HISTORY, META_COLS, OBSERVABLE_COLS, ORACLE_COLS
 from ml.predict import Predictor
 from ml.record import build_dataset
-from ml.train import backtest, seed_split, train_eval
+from ml.train import backtest, forecast, seed_split, train_eval
 
 
 def test_observable_set_has_no_latent_or_future_data():
@@ -48,6 +49,16 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     artifact = out["artifact"]
     assert set(artifact["train_seeds"]).isdisjoint(artifact["test_seeds"] + artifact["calibration_seeds"])
     assert set(artifact["test_seeds"]).isdisjoint(artifact["calibration_seeds"])
+    # Even replacing every held-out outcome cannot change the fitted model or interval.
+    altered = df.copy()
+    held_out = altered.seed.isin(artifact['test_seeds'])
+    altered.loc[held_out, 'y'] = 1 - altered.loc[held_out, 'y']
+    altered.loc[held_out, 'target_return'] *= -1
+    altered.loc[held_out, 'future_price'] = altered.loc[held_out, 'price'] * (1 + altered.loc[held_out, 'target_return'])
+    other = train_eval(altered, max_iter=10)['artifact']
+    features = df[OBSERVABLE_COLS].to_numpy()
+    np.testing.assert_array_equal(artifact['model'].predict_proba(features), other['model'].predict_proba(features))
+    np.testing.assert_array_equal(forecast(artifact, features), forecast(other, features))
     path = tmp_path / "model.pkl"
     joblib.dump(artifact, path)
     predictor = Predictor(str(path))
@@ -59,6 +70,13 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     assert state["horizon"] == 7 and state["n"] == 0
     first_prices = dict(engine.last)
     first_signals = state["signals"]
+    hidden_changed = copy.deepcopy(engine)
+    for company in hidden_changed.companies.values():
+        company.eps *= 10  # unpublished live fundamentals are forbidden model inputs
+    for trader in hidden_changed.traders:
+        trader.fear, trader.greed, trader.phase = 1., 1., 'markdown'
+    for symbol in engine.symbols:
+        np.testing.assert_array_equal(predictor._vector(engine, symbol), predictor._vector(hidden_changed, symbol))
     # Offline and online feature construction agree on the same market prefix.
     replay = build_dataset([99], HISTORY + 7, horizon=7)
     for s in engine.symbols:

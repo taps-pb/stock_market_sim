@@ -11,6 +11,8 @@ def plan_orders(quotes: list[dict], signals: dict, account: dict, limits: dict,
                 hold_benchmark: bool = False, spent: dict | None = None) -> list[dict]:
     positions = {p["symbol"]: p for p in account["positions"]}
     orders = []
+    exiting = set()
+    reckless = limits.get("risk_profile") == "super_risky"
     fee = limits["fee_bps"] / 10_000
     slip = limits["slippage_bps"] / 10_000
     equity = max(0, account["total"])
@@ -25,14 +27,17 @@ def plan_orders(quotes: list[dict], signals: dict, account: dict, limits: dict,
         elif pos and not hold_benchmark:
             if pos["last"] <= pos["avg"] * (1 - limits["stop_loss"]):
                 reason = "Position stop reached"
-            elif ages.get(symbol, 0) >= horizon:
-                reason = "Forecast holding period elapsed"
+            elif reckless and signal and signal["prob"] < .50:
+                reason = "Fear exit: forecast flipped bearish"
+            elif ages.get(symbol, 0) >= (3 if reckless else horizon):
+                reason = "FOMO rotation: three-tick maximum hold" if reckless else "Forecast holding period elapsed"
             elif signal and signal["prob"] < 0.45:
                 reason = "Forecast reversed"
         if reason:
             # Liquidation is an actual market order; scarce depth may leave inventory.
             orders.append(dict(symbol=symbol, side="SELL", qty=pos["shares"],
                                price=None, reason=reason, reference=quote["bid"] or quote["last"]))
+            exiting.add(symbol)
     if liquidate:
         return orders
     candidates = quotes if hold_benchmark else sorted(
@@ -46,12 +51,15 @@ def plan_orders(quotes: list[dict], signals: dict, account: dict, limits: dict,
                          - (spent or {}).get(symbol, 0))
         else:
             signal = signals.get(symbol)
-            if symbol in positions or not signal or signal["prob"] < limits["min_probability"]:
+            if symbol in exiting or not signal or signal["prob"] < limits["min_probability"]:
                 continue
             edge = signal["price"] / ask - 1 - 2 * fee - slip
-            if edge < limits["min_edge_bps"] / 10_000:
+            if not reckless and edge < limits["min_edge_bps"] / 10_000:
                 continue
-            budget = equity * limits["max_position"]
+            if symbol in positions and not reckless:
+                continue
+            current = positions.get(symbol, {}).get("value", 0)
+            budget = max(0, equity * limits["max_position"] - current)
         limit = round(ask * (1 + slip), 2)
         depth = sum(q for p, q in quote["depth"]["asks"] if p <= limit)
         qty = min(int(min(budget, room, cash) / (limit * (1 + fee))),
@@ -62,7 +70,8 @@ def plan_orders(quotes: list[dict], signals: dict, account: dict, limits: dict,
         cash -= committed
         room -= committed
         reason = ("Build equal-weight buy-and-hold allocation" if hold_benchmark else
-                  f"Forecast edge {edge * 10_000:.0f} bps after estimated costs; up probability {signal['prob']:.0%}")
+                  ("FOMO entry: chase bullish forecast; pyramid toward maximum greed allocation" if reckless else
+                   f"Forecast edge {edge * 10_000:.0f} bps after estimated costs; up probability {signal['prob']:.0%}"))
         orders.append(dict(symbol=symbol, side="BUY", qty=qty, price=limit,
                            reason=reason, reference=ask))
     return orders

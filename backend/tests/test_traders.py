@@ -35,7 +35,7 @@ def test_weak_hands_panic_but_whale_buys_the_dip():
     for _ in range(3):
         whale.update_emotion(q, CFG)
     assert whale.fear < 0.3                                   # doesn't flinch
-    assert not any(o.side is Side.SELL for o in whale.decide(q, CFG, rng))
+    assert any(o.side is Side.BUY for o in whale.decide(q, CFG, rng))
 
 
 def test_fomo_chases_rally_but_value_stays_disciplined():
@@ -73,8 +73,9 @@ def test_market_reverts_toward_fair_value_and_stays_consistent():
     assert sum(devs) / len(devs) < 0.25                      # market tracks fundamentals on average
 
 
-def test_institutions_run_campaigns_and_trap_retail():
+def test_institutions_run_asynchronous_campaigns_and_trade_both_sides():
     eng = SimEngine(Config(), SEED_COMPANIES)
+    assert len({t.phase for t in eng.traders if t.traits.is_institution}) > 1
     phases = set()
     for _ in range(5000):
         eng.step()
@@ -83,17 +84,7 @@ def test_institutions_run_campaigns_and_trap_retail():
     # full accumulate -> markup -> distribute -> markdown cycles ran
     assert {"accumulate", "markup", "distribute", "markdown"} <= phases
 
-    # beta-neutral trap signature: normalize every fill by the fair value at that
-    # moment. Smart money buys below fair and sells above it; the crowd buys richer.
-    def rel(pred):
-        bq = sum(t.buy_qty for t in eng.traders if pred(t))
-        sq = sum(t.sell_qty for t in eng.traders if pred(t))
-        br = sum(t.buy_rel for t in eng.traders if pred(t))
-        sr = sum(t.sell_rel for t in eng.traders if pred(t))
-        return (br / bq if bq else 0.0, sr / sq if sq else 0.0)
-
-    inst_buy_rel, inst_sell_rel = rel(lambda t: t.traits.is_institution)
-    ret_buy_rel, _ = rel(lambda t: TIER.get(t.archetype) == "retail")
-
-    assert inst_sell_rel > inst_buy_rel   # institutions sell richer than they buy (buy low, sell high)
-    assert ret_buy_rel > inst_buy_rel     # retail buys at a higher price/fair than smart money — the trap
+    # Profit is an experiment outcome, never a required property of an archetype.
+    institutions = [t for t in eng.traders if t.traits.is_institution]
+    assert sum(t.buy_qty for t in institutions) > 0
+    assert sum(t.sell_qty for t in institutions) > 0

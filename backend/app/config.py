@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-SIM_VERSION = 2  # invalidate training artifacts when market mechanics change
+SIM_VERSION = 4  # invalidate training artifacts when market mechanics change
 
 
 @dataclass
@@ -30,9 +30,12 @@ class Config:
     mm_half_spread: float = 0.001
     mm_vol_spread: float = 0.5
     mm_liquidity_sensitivity: float = 100.0
+    mm_value_weight: float = 0.85  # reservation value comes mainly from a noisy current signal
+    mm_signal_noise: float = 0.002 # private valuation error, not future information
+    mm_opportunity_alloc: float = 0.10 # capital available to take a mispriced opposing quote
 
     # exogenous news shocks — random, unforeseeable market orders that gap price.
-    # These are the irreducible uncertainty that keeps the market realistically hard.
+    # They add uncertainty; realism must still be checked empirically.
     news_prob: float = 0.12         # chance per tick that a headline hits some stock
     news_notional: float = 90_000   # typical size of the news-driven order
     news_surprise: float = 0.015    # public valuation revision accompanying news
@@ -48,8 +51,8 @@ class Config:
     w_momentum: float = 1.0
     w_greed: float = 0.8
     w_fear: float = 1.2
-    buy_threshold: float = 0.15
-    sell_threshold: float = 0.15
+    buy_threshold: float = 0.005  # scores are fractional returns, not 0..1 confidence scores
+    sell_threshold: float = 0.005
 
     # institutional campaign (smart money: accumulate -> markup -> distribute -> markdown).
     # The edge is passive: accumulate cheap, let RETAIL mark it up, distribute into
@@ -87,7 +90,7 @@ class Config:
         "bagholder": 0.05,
         "noise": 0.05,
     })
-    n_market_makers_per_symbol: int = 1
+    n_market_makers_per_symbol: int = 3
 
 
 # symbol, name, sector, initial price, eps, base_pe, growth, quality(0..1)

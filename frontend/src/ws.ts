@@ -1,7 +1,7 @@
-import type { Snapshot } from "./store";
+import type { AnySnapshot } from "./store";
 
 // Connect to the sim stream; auto-reconnect on drop.
-export function connectWs(onSnap: (s: Snapshot) => void, onStatus: (online: boolean) => void = () => {}): () => void {
+export function connectWs(onSnap: (s: AnySnapshot) => void, onStatus: (online: boolean) => void = () => {}): () => void {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;

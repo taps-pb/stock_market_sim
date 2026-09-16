@@ -1,7 +1,7 @@
 # Market Lab · Agent Trading Arena
 
 Fund an AI agent, turn on a simulated exchange, and measure what it actually
-earns. Atlas trades six fictional stocks against 206 autonomous participants:
+earns. Atlas trades six fictional stocks against 218 autonomous participants:
 panic sellers, FOMO buyers, value investors, momentum traders, institutions,
 whales, pensions, and market makers. Prices emerge from their matched orders.
 
@@ -73,6 +73,16 @@ Partial fills and zero fills are recorded. The agent's cash and shares change
 only through actual exchange fills, including fees. The journal shows the
 requested quantity, actual fill, execution tick, price, and decision reason.
 
+The optional **Super risky** profile checks every tick, chases every forecast at
+or above 50% up probability even when expected edge does not cover costs, and
+pyramids toward its cap while the forecast stays bullish. It dumps the position
+on a bearish flip or after a three-tick maximum hold, then immediately reassesses.
+It can use 30% of equity per stock, 90% total exposure, 50% of displayed ask
+depth, and 1% entry slippage. Its position loss stop remains 15%, but it ignores
+the automatic account drawdown halt and keeps trading through losses. Manual
+halt still liquidates and stops new buys; available cash and actual liquidity
+still constrain trades. Thin books can prevent exits or produce worse execution.
+
 Buy-and-hold receives the same starting cash, builds equal target allocations
 across six stocks within the same exposure budget, and holds until settlement.
 It uses the same liquidity participation, delayed execution, and fees. Its
@@ -91,8 +101,9 @@ this is a shared-exchange comparison, not separate counterfactual price paths.
   valuation responses, and trading horizons. Institutions follow staged
   accumulation/distribution campaigns; ordinary retail cannot short.
 - Shared market and sector fundamental shocks, persistent calm/stressed states,
-  staggered earnings, and public news revisions. Market makers widen spreads
-  and reduce size when observed volatility rises.
+  staggered earnings, and public news revisions. Competing market makers price noisy current valuations, widen spreads
+  when volatility rises, and actively take sufficiently mispriced quotes.
+  Institutional campaigns start in different phases with different clocks.
 - Balanced, volatile, and retail-heavy experiment environments. The participant
   page exposes simulator internals for observers, explicitly hidden from Atlas.
 
@@ -102,16 +113,22 @@ agent comparisons, leave the manual account idle.
 
 ## Results and reproducibility
 
-The current evaluation ran three fresh seeds (101–103) across all three
-scenarios, with $100,000 per account and 1,500 trading ticks:
+The v4 evaluation ran eight fresh seeds (501–508) across all three scenarios,
+with $100,000 per account and 1,500 trading ticks:
 
 | Measure | Result |
 |---|---:|
-| Fully settled experiments | 9 / 9 |
-| Agent profitable after fees | 9 / 9 |
-| Agent beat buy-and-hold | 5 / 9 |
-| Mean agent return | +1.58% |
-| Mean excess profit over buy-and-hold | −$949.77 |
+| Atlas accounts fully liquidated | 24 / 24 |
+| Atlas profitable / loss / flat | 19 / 5 / 0 |
+| Mean Atlas return after fees | +0.94% |
+| Worst Atlas result | −$2,274.99 |
+| Fully liquidated paired comparisons | 22 / 24 |
+| Atlas beat buy-and-hold, among paired comparisons | 14 / 22 |
+
+Buy-and-hold retained inventory in two runs. Those do not exclude Atlas's own
+realized losses from its statistics. The old 23/24 profitable archive exposed
+simulator shortcuts; [the audit](backend/reports/realism-audit.md) documents the
+investigation and fixes. Old results remain available, labelled by version.
 
 See [the funded-agent report](backend/reports/agent-evaluation.md) and
 [raw results](backend/reports/agent-evaluation.json). These are small synthetic
@@ -122,16 +139,22 @@ Run the same evaluation from `backend/`:
 
 ```bash
 OMP_NUM_THREADS=1 python -m app.evaluate \
-  --seeds 101 102 103 --scenarios balanced volatile retail --ticks 1500
+  --seeds 501 502 503 504 505 506 507 508 \
+  --scenarios balanced volatile retail --ticks 1500
 ```
 
 Every run is archived in `backend/data/runs.sqlite3`; the report is written to
-`backend/reports/agent-evaluation.json`. The UI shows the latest 30 results.
+`backend/reports/agent-evaluation.json`. The UI paginates all results, labels their simulator version, and
+scopes its summary to the current simulator/model. It shows profit, loss, flat
+outcomes and distinct seed counts; repeated seeds are not independent trials.
 Exports include settings, engine configuration, model fingerprint, sampled
 capital curve, full agent decisions/fills, and manual fills. Identical seed,
 settings, code, model, and manual inputs reproduce the same exchange path.
+External fundamentals and news use a separate random stream, so policy order
+counts cannot change future external shocks.
 Earlier development trials remain in the local archive; the report identifies
-its exact nine run IDs.
+its exact run IDs. Market v2 and the rejected v3 candidate are historical results,
+not evidence for v4. See [the audit](backend/reports/realism-audit.md).
 
 Finish attempts to liquidate both accounts for up to 100 additional ticks.
 If liquidity never appears, remaining inventory stays visible; it is never
@@ -139,19 +162,90 @@ converted into invented cash. Restarting creates a new market. Graceful shutdown
 archives an unfinished run as interrupted; a running market is not resumable
 and a hard process kill can lose the current unfinished run.
 
-## Train the price model
+## Blind historical replay
+
+Choose **New experiment → Blind historical replay**, import a local CSV, select
+its dataset, and start a 100-session (or longer) experiment. Finish the current
+experiment first. No data-provider account or network download is required.
+
+CSV headers must be exactly:
+
+```csv
+date,symbol,open,high,low,close,volume
+2010-01-04,EXAMPLE,100,102,99,101,1000000
+```
+
+This row illustrates the format, not a usable dataset. Supply roughly 800 or more
+daily bars per symbol, ordered by date within each symbol. Dates use YYYY-MM-DD;
+duplicate symbol/date pairs, nonfinite values, invalid OHLC bounds, nonpositive
+prices, and negative volume are rejected. Limit: 10 MiB and 100,000 rows. Prices
+must already be consistently adjusted for splits and dividends. Missing dates
+are not filled: a session means one supplied bar for the selected symbol.
+The app cannot verify source quality or perform corporate-action adjustments.
+
+The earliest 70% of unique dataset dates are for training, the next 15% for
+calibration, and the last 15% for testing. Targets are purged at boundaries;
+the first 20 dataset sessions after each boundary are embargoed. Splits are
+shared across symbols, so a later period of one stock cannot train a model
+tested on an earlier period of another. The seed chooses one eligible stock
+and contiguous test window. At least 100 test bars must remain after embargo.
+
+Models receive only causal price vectors from 60 bars. The chart starts with
+59 context bars, followed by day 1. The models never receive ticker, date,
+dataset ID, or unrevealed bars. The display uses Asset A and relative days,
+then reveals ticker and dates on completion, interruption, or early Finish.
+This is a model-input boundary, not access control against the local operator
+who imported the data.
+
+Two frozen models predict 20 sessions ahead: the existing simulator model
+with unavailable book/flow/valuation inputs set to zero, and a newly fitted
+price-only historical model. The former is explicitly an out-of-distribution
+transfer experiment: 20 simulator ticks and 20 daily sessions have different
+meaning. Neither model learns from the selected test outcomes.
+
+Forecasts are saved daily; headline scoring uses days 1, 21, 41, … and waits
+20 sessions for each target. A 100-session run therefore has only four matured
+checkpoints. Tail forecasts remain unresolved. Direction ties count as non-up.
+Balanced accuracy is unavailable unless both up and non-up outcomes occur.
+“Useful signal” is a descriptive label requiring better balanced accuracy than
+both direction baselines and lower MAE than unchanged price in this sample.
+It is not statistical significance or evidence of future profitability.
+
+Paper results use one share per model, enter at the next open when predicted
+return exceeds the 2 bp round-trip fee estimate, and exit at target-day close.
+Fees are 1 bp each side; positions never overlap. Early-finished or end-of-data
+inventory remains marked, with entry fees included in unrealized P&L. This
+does not simulate spread, slippage, volume participation, or achievable fills.
+Values use the CSV's price units, not an assumed currency.
+
+Datasets live under ignored `backend/data/replay/`, identified by normalized
+CSV SHA-256. Run exports include both model fingerprints, split boundaries,
+all daily forecasts, checkpoint outcomes, revealed bars, and paper accounts.
+Reproduction needs the same normalized CSV, code, dependencies, and simulator
+artifact. The model is fitted deterministically again for each replay.
+Archive filters and pagination expose all saved synthetic and historical runs;
+historical outcomes never enter synthetic profitability summaries.
+
+API additions: `POST /api/replay-datasets?name=...` accepts a `text/csv` body;
+`GET /api/replay-datasets` lists imports; `POST /api/replay-runs` accepts
+`dataset_id`, `seed`, and `duration`. `GET /api/runs` now returns
+`{items,total,limit,offset}` and accepts `limit`, `offset`, and optional `kind`
+(`synthetic` or `historical`). Old archived runs default to synthetic. Synthetic
+order/candle endpoints return 409 while historical replay is active.
+
+## Train the synthetic price model
 
 From `backend/`, with the virtual environment active:
 
 ```bash
-python -m ml.record --seeds 8 --ticks 3000 --horizon 20
-OMP_NUM_THREADS=1 python -m ml.train --save ml/model.pkl
+python -m ml.record --seeds 8 --ticks 3000 --horizon 20 --out ml/data/dataset-v4.csv
+OMP_NUM_THREADS=1 python -m ml.train --data ml/data/dataset-v4.csv --save ml/model.pkl
 ```
 
 The included artifact uses seeds 1–5 for training, seed 6 for interval
 calibration, and seeds 7–8 for untouched evaluation. Its public-input forecast
-price MAE is $0.601 versus $1.032 for unchanged price; direction accuracy is
-87.3%, and interval coverage is 79.1%. These forecasting metrics are separate
+price MAE is $0.868 versus $0.989 for unchanged price; direction accuracy is
+69.5%, and interval coverage is 79.6%. These forecasting metrics are separate
 from the funded trading experiments. See [the model report](backend/ml/report.md).
 Up probabilities are classifier estimates, not calibrated probabilities of profit.
 

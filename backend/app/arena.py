@@ -25,6 +25,7 @@ class Experiment:
     capital: float = 100_000
     duration: int = 1500
     scenario: str = "balanced"
+    risk_profile: str = "balanced"
     max_position: float = 0.20
     max_exposure: float = 0.60
     max_drawdown: float = 0.08
@@ -49,6 +50,8 @@ class Experiment:
             raise ValueError("duration must be an integer between 100 and 10000 ticks")
         if self.scenario not in {"balanced", "volatile", "retail"}:
             raise ValueError("unknown market scenario")
+        if self.risk_profile not in {"cautious", "balanced", "assertive", "super_risky"}:
+            raise ValueError("unknown risk profile")
         if self.max_position > self.max_exposure:
             raise ValueError("single-position limit cannot exceed total exposure")
 
@@ -133,7 +136,7 @@ class Arena:
                                    "execution_tick": self.engine.tick, "filled": filled,
                                    "avg_price": sum(t["qty"] * t["price"] for t in fills) / filled if filled else None})
         self._record_curve()
-        if self.drawdowns[AI_ID] >= self.settings.max_drawdown:
+        if self.settings.risk_profile != "super_risky" and self.drawdowns[AI_ID] >= self.settings.max_drawdown:
             self.agent_halted = True
         if self.status == "running" and self.engine.tick >= HISTORY + self.settings.duration:
             self.finish()
@@ -147,7 +150,8 @@ class Arena:
                 self.pending = []
                 return
         self.model = self.predictor.step(self.engine)
-        if self.status == "settling" or self.agent_halted or self.engine.tick % 5 == 0:
+        interval = 1 if self.settings.risk_profile == "super_risky" else 5
+        if self.status == "settling" or self.agent_halted or self.engine.tick % interval == 0:
             self._plan(liquidate=self.status == "settling")
 
     def _plan(self, liquidate: bool):
@@ -171,7 +175,8 @@ class Arena:
         if not self.pending and self.engine.tick % 20 == 0:
             self.decisions.append({"tick": self.engine.tick, "trader": AI_ID, "side": "WAIT",
                                    "symbol": "—", "qty": 0, "filled": 0, "price": None,
-                                   "reason": "No executable opportunity exceeds the risk and cost limits"})
+                                   "reason": ("No funded, liquid entry or exit available" if self.settings.risk_profile == "super_risky"
+                                              else "No executable opportunity exceeds the risk and cost limits")})
 
     def account(self, tid: str) -> dict:
         portfolio = self.engine.portfolio(tid)
@@ -217,7 +222,7 @@ class Arena:
         closed = not agent["positions"]
         verdict = ("Profitable" if agent["net_pnl"] > 0 else "Loss" if agent["net_pnl"] < 0 else "Flat") if closed else "Open inventory"
         return {**self.engine.snapshot(), "model": self.model,
-                "arena": {"id": self.id, "created_at": self.created_at, "status": self.status,
+                "arena": {"kind": "synthetic", "id": self.id, "created_at": self.created_at, "status": self.status,
                           "error": self.error, "settings": asdict(self.settings), "agent_halted": self.agent_halted,
                           "elapsed": max(0, self.engine.tick - HISTORY), "warmup": HISTORY,
                           "verdict": verdict if self.terminal else "In progress",
@@ -226,7 +231,7 @@ class Arena:
                           "fills": self.engine.executions[AI_ID][-50:][::-1], "population": self.population(),
                           "manual_interventions": len(self.engine.executions["USER"]),
                           "model_fingerprint": getattr(self.predictor, "fingerprint", None),
-                          "policy_version": 1, "sim_version": SIM_VERSION,
+                          "policy_version": 2 if self.settings.risk_profile == "super_risky" else 1, "sim_version": SIM_VERSION,
                           "model_ready": self.predictor is not None}}
 
     def result(self) -> dict:
@@ -252,10 +257,21 @@ class RunStore:
         arena.archived = True
 
     def list(self) -> list[dict]:
+        return self.page()["items"]
+
+    def page(self, limit=30, offset=0, kind=None) -> dict:
         with sqlite3.connect(self.path) as db:
-            rows = db.execute("SELECT result FROM runs ORDER BY created_at DESC LIMIT 30").fetchall()
-        return [{k: a[k] for k in ("id", "created_at", "status", "settings", "elapsed", "verdict", "agent", "benchmark", "excess_pnl")}
-                for (raw,) in rows for a in [json.loads(raw)["arena"]]]
+            where = " WHERE COALESCE(json_extract(result, '$.arena.kind'), 'synthetic') = ?" if kind else ""
+            params = (kind,) if kind else ()
+            total = db.execute("SELECT COUNT(*) FROM runs" + where, params).fetchone()[0]
+            rows = db.execute("SELECT result FROM runs" + where + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+                              (*params, limit, offset)).fetchall()
+        items = []
+        for (raw,) in rows:
+            a = json.loads(raw)["arena"]
+            items.append({**{k: a.get(k) for k in ("id", "created_at", "status", "settings", "elapsed", "verdict", "agent", "benchmark", "excess_pnl",
+                                                "sim_version", "model_fingerprint", "manual_interventions")}, "kind": a.get("kind", "synthetic")})
+        return dict(items=items, total=total, limit=limit, offset=offset)
 
     def get(self, run_id: str) -> dict | None:
         with sqlite3.connect(self.path) as db:
