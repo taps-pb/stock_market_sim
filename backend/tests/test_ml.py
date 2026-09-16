@@ -10,7 +10,7 @@ from app.engine.simulation import SimEngine
 from ml.features import HISTORY, META_COLS, OBSERVABLE_COLS, ORACLE_COLS
 from ml.predict import Predictor
 from ml.record import build_dataset
-from ml.train import backtest, forecast, seed_split, train_eval, up_probability
+from ml.train import backtest, forecast, seed_split, train_eval
 
 
 def test_observable_set_has_no_latent_or_future_data():
@@ -59,10 +59,6 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     features = df[OBSERVABLE_COLS].to_numpy()
     np.testing.assert_array_equal(artifact['model'].predict_proba(features), other['model'].predict_proba(features))
     np.testing.assert_array_equal(forecast(artifact, features), forecast(other, features))
-    np.testing.assert_array_equal(up_probability(artifact, features), up_probability(other, features))
-    assert artifact['calibrator']['method'] in {'platt', 'isotonic'}
-    assert ((0 <= up_probability(artifact, features)) & (up_probability(artifact, features) <= 1)).all()
-    assert sum(r['n'] for r in out['reliability']['calibrated']) == out['n_test']
     path = tmp_path / "model.pkl"
     joblib.dump(artifact, path)
     predictor = Predictor(str(path))
@@ -100,10 +96,6 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     engine.step()  # a missing tick invalidates features and exact-horizon calls
     reset = predictor.step(engine)
     assert reset["n"] == 0 and not reset["signals"]
-    stale = {k: v for k, v in artifact.items() if k != 'calibrator'}
-    joblib.dump(stale, path)
-    with pytest.raises(ValueError, match="incompatible"):
-        Predictor(str(path))  # an uncalibrated artifact must not silently serve raw probabilities
     artifact["sim_version"] = -1
     joblib.dump(artifact, path)
     with pytest.raises(ValueError, match="incompatible"):

@@ -9,14 +9,12 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-from sklearn.isotonic import IsotonicRegression
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, roc_auc_score
 
 from app.config import Config, SIM_VERSION
 from .features import OBSERVABLE_COLS, ORACLE_COLS
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 2
 INTERVAL_COVERAGE = 0.8
 
 
@@ -39,36 +37,6 @@ def forecast(artifact: dict, x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.
     lower = np.minimum(np.minimum(low, high), median) - pad
     upper = np.maximum(np.maximum(low, high), median) + pad
     return np.maximum(median, -0.999), np.maximum(lower, -0.999), np.maximum(upper, -0.999)
-
-
-def _logit(p: np.ndarray) -> np.ndarray:
-    p = np.clip(p, 1e-6, 1 - 1e-6)
-    return np.log(p / (1 - p)).reshape(-1, 1)
-
-
-def _fit_calibrator(method: str, p: np.ndarray, y: np.ndarray):
-    if len(np.unique(y)) < 2:
-        raise ValueError("calibration needs both up and non-up examples; record longer markets")
-    if method == "isotonic":
-        return IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip").fit(p, y)
-    return LogisticRegression(C=1e6).fit(_logit(p), y)
-
-
-def _calibrate(method: str, model, p: np.ndarray) -> np.ndarray:
-    return model.predict(p) if method == "isotonic" else model.predict_proba(_logit(p))[:, 1]
-
-
-def up_probability(artifact: dict, x: np.ndarray) -> np.ndarray:
-    """Calibrated up probability; same mapping at evaluation and serving."""
-    c = artifact["calibrator"]
-    return np.clip(_calibrate(c["method"], c["model"], artifact["model"].predict_proba(x)[:, 1]), 0, 1)
-
-
-def reliability(y: np.ndarray, p: np.ndarray, bins: int = 10) -> list[dict]:
-    index = np.minimum((p * bins).astype(int), bins - 1)
-    return [{"bin": f"{b / bins:.1f}-{(b + 1) / bins:.1f}", "n": int((index == b).sum()),
-             "mean_prob": float(p[index == b].mean()), "up_rate": float(y[index == b].mean())}
-            for b in range(bins) if (index == b).any()]
 
 
 def _metrics(y, pred, proba=None) -> dict:
@@ -169,22 +137,7 @@ def train_eval(df: pd.DataFrame, max_iter: int = 120) -> dict:
     level = min(1, ceil((len(scores) + 1) * INTERVAL_COVERAGE) / len(scores))
     artifact["interval_pad"] = float(np.quantile(scores, level, method="higher"))
 
-    # Choose isotonic or Platt by two-fold, time-split Brier within the calibration seed only.
-    raw_cal = artifact["model"].predict_proba(calibration[OBSERVABLE_COLS].to_numpy())[:, 1]
-    yup = calibration["y"].to_numpy()
-    first = calibration["tick"].to_numpy() <= np.median(calibration["tick"])
-    brier = {"uncalibrated": float(np.mean((raw_cal - yup) ** 2))}
-    for method in ("platt", "isotonic"):
-        crossed = np.empty(len(yup))
-        for fit in (first, ~first):
-            crossed[~fit] = _calibrate(method, _fit_calibrator(method, raw_cal[fit], yup[fit]), raw_cal[~fit])
-        brier[method] = float(np.mean((crossed - yup) ** 2))
-    method = min(("platt", "isotonic"), key=brier.get)
-    artifact["calibrator"] = {"method": method, "model": _fit_calibrator(method, raw_cal, yup),
-                              "calibration_brier": brier}
-
     proba = artifact["model"].predict_proba(xte)[:, 1]
-    calibrated = up_probability(artifact, xte)
     pred, lo, hi = forecast(artifact, xte)
     oracle = HistGradientBoostingClassifier(**params).fit(tr[OBSERVABLE_COLS + ORACLE_COLS].to_numpy(), ytr)
     oracle_proba = oracle.predict_proba(te[OBSERVABLE_COLS + ORACLE_COLS].to_numpy())[:, 1]
@@ -192,7 +145,6 @@ def train_eval(df: pd.DataFrame, max_iter: int = 120) -> dict:
         "baseline_majority": _metrics(yte, np.full_like(yte, int(ytr.mean() >= 0.5))),
         "baseline_persistence": _metrics(yte, (te["ret_1"].to_numpy() > 0).astype(int)),
         "gbm_observable": _metrics(yte, (proba >= 0.5).astype(int), proba),
-        "gbm_calibrated": _metrics(yte, (calibrated >= 0.5).astype(int), calibrated),
         "gbm_oracle": _metrics(yte, (oracle_proba >= 0.5).astype(int), oracle_proba),
     }
     actual = te["target_return"].to_numpy()
@@ -206,11 +158,8 @@ def train_eval(df: pd.DataFrame, max_iter: int = 120) -> dict:
                      "baseline_return_mae_bps": float(np.mean(np.abs(actual)) * 10_000),
                      "coverage": float(np.mean((actual >= lo) & (actual <= hi))),
                      "interval_width_bps": float(np.mean(hi - lo) * 10_000)}
-    artifact["evaluation"] = {"direction_accuracy": results["gbm_calibrated"]["acc"], **price_metrics}
+    artifact["evaluation"] = {"direction_accuracy": results["gbm_observable"]["acc"], **price_metrics}
     return {"results": results, "price": price_metrics,
-            "reliability": {"uncalibrated": reliability(yte, proba), "calibrated": reliability(yte, calibrated)},
-            "above_entry_threshold": {"uncalibrated": float(np.mean(proba >= 0.62)),
-                                      "calibrated": float(np.mean(calibrated >= 0.62))},
             "backtest": backtest(te, pred, Config().fee_bps),
             "test_seeds": test_seeds, "calibration_seeds": [calibration_seed],
             "n_train": len(tr), "n_calibration": len(calibration), "n_test": len(te),
@@ -232,24 +181,16 @@ def _report(out: dict) -> str:
               f"Price RMSE: ${p['rmse']:.3f}. Return MAE: {p['return_mae_bps']:.1f} bps "
               f"(baseline {p['baseline_return_mae_bps']:.1f} bps).",
               f"Nominal 80% interval: measured coverage **{p['coverage']:.1%}**, mean width {p['interval_width_bps']:.1f} bps.",
-              "", f"Up probability calibration: **{a['calibrator']['method']}**, chosen by two-fold time-split Brier on calibration seed {out['calibration_seeds']} "
-              f"({', '.join(f'{k} {v:.4f}' for k, v in a['calibrator']['calibration_brier'].items())}); refit on that seed only.",
-              f"Test Brier: uncalibrated **{out['results']['gbm_observable']['brier']:.4f}**, calibrated **{out['results']['gbm_calibrated']['brier']:.4f}**. "
-              f"Test rows at or above the 62% entry threshold: {out['above_entry_threshold']['uncalibrated']:.1%} uncalibrated, "
-              f"{out['above_entry_threshold']['calibrated']:.1%} calibrated.",
-              "", "| Reliability (test) | Bin | Rows | Mean probability | Observed up rate |", "|---|---|---:|---:|---:|"]
-    lines += [f"| {name} | {r['bin']} | {r['n']:,} | {r['mean_prob']:.3f} | {r['up_rate']:.3f} |"
-              for name, rows in out["reliability"].items() for r in rows]
-    lines += ["", f"One-share long-only quote replay: {b['trades']} closed trades, realized net P&L **${b['net_pnl']:.2f}**, "
+              "", f"One-share long-only quote replay: {b['trades']} closed trades, realized net P&L **${b['net_pnl']:.2f}**, "
               f"mean net return {b['mean_return_bps']:.1f} bps/trade, win rate {b['win_rate']:.1%}.",
               f"Entry at next-tick ask; exit at horizon bid or the next available bid; {b['fee_bps']} bps fee each side. No overlapping positions per symbol.",
               f"Delayed exits: {b['delayed_exits']}; positions still open: {b['open_positions']} "
               f"(unrealized P&L at final last price: ${b['unrealized_pnl']:.2f}; not guaranteed executable).",
               "", "These are simulator benchmarks, not evidence of real-market performance. Interval coverage is empirical, "
-              "not guaranteed under new regimes. Calibrated probabilities are empirical on one calibration seed, not probabilities of profitable execution. "
+              "not guaranteed under new regimes. Direction probabilities are uncalibrated classifier estimates. "
               "Quote replay assumes one share can fill at recorded quotes, without changing subsequent market behavior; "
               "it is not a scalable execution backtest. Test labels overlap, so row count is not an independent sample count.",
-              "", "The saved model uses only training seeds; the interval pad and probability calibrator use only the calibration seed; test markets are never fitted. "
+              "", "The saved model uses only training seeds; calibration and test markets are never fitted. "
               "Agent emotions, campaign phases and live intrinsic value are oracle-only features.",
               "", "Method references: [scikit-learn quantile regression](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html), "
               "[time-ordered evaluation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html)."]
