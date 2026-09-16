@@ -10,7 +10,7 @@ import numpy as np
 
 from app.config import SIM_VERSION
 from .features import HISTORY, OBSERVABLE_COLS, observable_row
-from .train import SCHEMA_VERSION, forecast
+from .train import SCHEMA_VERSION, forecast, up_probability
 
 
 class Predictor:
@@ -20,9 +20,8 @@ class Predictor:
         d = self.artifact
         if (d.get("schema_version") != SCHEMA_VERSION or d.get("sim_version") != SIM_VERSION
                 or d.get("cols") != OBSERVABLE_COLS or not isinstance(d.get("horizon"), int)
-                or d["horizon"] < 1):
+                or d["horizon"] < 1 or "calibrator" not in d):
             raise ValueError("incompatible model; regenerate data and retrain")
-        self.model = d["model"]
         self.cols = d["cols"]
         self.horizon = d["horizon"]
         self.buf: dict[str, deque] = {}
@@ -65,7 +64,7 @@ class Predictor:
         signals = {}
         if symbols:
             x = np.array([self._vector(engine, s) for s in symbols])
-            probs = self.model.predict_proba(x)[:, 1]
+            probs = up_probability(self.artifact, x)
             returns, lows, highs = forecast(self.artifact, x)
             for s, p, ret, lo, hi in zip(symbols, probs, returns, lows, highs):
                 initial = engine.last[s]
