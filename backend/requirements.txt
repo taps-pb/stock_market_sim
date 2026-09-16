@@ -1,7 +1,8 @@
-fastapi
-uvicorn[standard]
-numpy
-sortedcontainers
-pytest
-scikit-learn
-pandas
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+numpy==2.5.3
+sortedcontainers==2.4.0
+pytest==9.1.1
+# model.pkl is a scikit-learn pickle; retrain before changing this version.
+scikit-learn==1.9.0
+pandas==3.0.5
