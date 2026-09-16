@@ -16,9 +16,9 @@ Backend, in one terminal:
 
 ```bash
 cd backend
-python3 -m venv .venv
+python3.14 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt  # exact pins; model.pkl needs scikit-learn 1.9.0
 OMP_NUM_THREADS=1 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -120,10 +120,17 @@ with $100,000 per account and 1,500 trading ticks:
 |---|---:|
 | Atlas accounts fully liquidated | 24 / 24 |
 | Atlas profitable / loss / flat | 19 / 5 / 0 |
-| Mean Atlas return after fees | +0.94% |
+| Mean Atlas return after fees (95% CI) | +0.94% (+0.44% to +1.47%) |
 | Worst Atlas result | −$2,274.99 |
 | Fully liquidated paired comparisons | 22 / 24 |
 | Atlas beat buy-and-hold, among paired comparisons | 14 / 22 |
+| Mean excess return vs buy-and-hold (95% CI) | +2.91% (+0.59% to +5.26%) |
+| Sign test on excess: per run / per-seed means | p = 0.29 / p = 0.73 |
+
+Intervals are seed-bootstrap percentiles (10,000 draws, whole seeds resampled,
+because the three scenarios of one seed are dependent). Mean return is positive
+across the interval, but Atlas beating buy-and-hold is **not statistically
+supported**: 5 of 8 seed means are positive (p = 0.73).
 
 Buy-and-hold retained inventory in two runs. Those do not exclude Atlas's own
 realized losses from its statistics. The old 23/24 profitable archive exposed
@@ -140,8 +147,21 @@ Run the same evaluation from `backend/`:
 ```bash
 OMP_NUM_THREADS=1 python -m app.evaluate \
   --seeds 501 502 503 504 505 506 507 508 \
-  --scenarios balanced volatile retail --ticks 1500
+  --scenarios balanced volatile retail --ticks 1500 \
+  --markdown reports/agent-evaluation.md
 ```
+
+The JSON `summary.statistics` block holds the intervals and sign tests.
+`--policy '{"min_edge_bps": 0}'` overrides policy settings. `--tune` sweeps a
+27-point grid (`min_probability`, `min_edge_bps`, `max_position`) and refuses
+final seeds 501–508; use tuning seeds such as 601–612.
+
+**Experiments not adopted (v5).** Platt calibration of the up probability, fit on
+calibration seed 6, scored worse than the raw classifier there (Brier 0.2011 vs
+0.1977) and lowered final mean return to +0.74%. The tuned policy (edge 0 bps,
+position 30%) raised mean return to +1.14% but had 8 losing runs and a −$4,345
+worst run, with overlapping intervals. Model and defaults stay v4. See
+[the v5 report](backend/reports/agent-evaluation-v5.md).
 
 Every run is archived in `backend/data/runs.sqlite3`; the report is written to
 `backend/reports/agent-evaluation.json`. The UI paginates all results, labels their simulator version, and
@@ -247,7 +267,8 @@ calibration, and seeds 7–8 for untouched evaluation. Its public-input forecast
 price MAE is $0.868 versus $0.989 for unchanged price; direction accuracy is
 69.5%, and interval coverage is 79.6%. These forecasting metrics are separate
 from the funded trading experiments. See [the model report](backend/ml/report.md).
-Up probabilities are classifier estimates, not calibrated probabilities of profit.
+Up probabilities are raw classifier estimates, not probabilities of profit. They are
+close to calibrated on seed 6 (Brier 0.198); Platt and isotonic calibration did not improve them.
 
 Restart after replacing the model. Regenerate data and retrain after changing
 market dynamics. Incompatible artifacts fail visibly; an experiment cannot
@@ -259,6 +280,8 @@ start without a compatible model.
 cd backend
 OMP_NUM_THREADS=1 .venv/bin/python -m pytest tests -q
 ```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs both suites and the build on every push.
 
 ```bash
 cd frontend

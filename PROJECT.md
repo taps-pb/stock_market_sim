@@ -97,10 +97,10 @@ can be inspected and exported as JSON. Desktop and 390-pixel mobile layouts
 were checked in Chrome, including funding, pause, speed, finish, stock switching,
 and archive inspection.
 
-The synthetic implementation passed 29 backend tests, the WebSocket lifecycle
+The implementation passes 41 backend tests, the WebSocket lifecycle
 check, and the TypeScript/Vite production build. Tests include next-tick timing,
 resource conservation, IOC handling, account P&L, deterministic runs, risk
-stops, and stranded inventory. No new runtime dependency was needed. Tests now also prove that changing
+stops, and stranded inventory. Backend dependencies are pinned exactly; CI runs backend tests, frontend tests, and the build. Tests now also prove that changing
 hidden state cannot alter live features, changing test outcomes cannot alter
 the fitted model, and changing order counts cannot alter external news.
 
@@ -130,8 +130,9 @@ README documents the CSV contract, API, units, small-sample limits, and reproduc
 The market is still highly learnable. Eight final seeds across three regimes are a
 small synthetic test, with dependencies across scenarios and symbols. No claim
 of real-market accuracy or profitability follows from these results. The
-classifier's up probability is not a calibrated probability of profitable
-execution. Overlapping forecast targets also limit interpretation of sample size.
+classifier's up probability is not a probability of profitable execution.
+Seed-bootstrap intervals put v4 mean return at +0.94% (+0.44% to +1.47%) but
+excess over buy-and-hold is not significant (per-seed sign test p = 0.73). Overlapping forecast targets also limit interpretation of sample size.
 
 The next substantive realism work is calibration against measured return tails,
 volatility clustering, spreads, depth, and order-flow persistence. Further
@@ -162,6 +163,17 @@ makers commit bounded capital to sufficiently mispriced opposing quotes.
 Unfunded noise sell intentions no longer become mandatory buys. The forecast
 model was retrained on fresh v4 data using the original train/calibration/test
 seed split. Trading-policy thresholds were not tuned to the final outcomes.
+
+## Evaluation statistics and v5 experiments
+
+`app.evaluate` reports seed-bootstrap 95% intervals for mean return and excess
+return, plus sign tests per run and per seed mean. `--tune` runs a grid sweep that
+raises if any final seed (501–508) is included; score is mean excess return minus
+0.5 × mean drawdown. Two v5 changes were evaluated once on the final seeds and not
+adopted: Platt calibration (worse Brier on seed 6, lower final return) and the tuned
+policy (edge 0 bps, 30% position; neighbouring grid points unstable, more losing runs,
+larger worst loss). `reports/agent-evaluation-v5*.json` and `policy-tuning-v5.json`
+are records only; the shipped model and `Experiment` defaults remain v4.
 
 `python -m app.audit` runs model-free controls, accounts for winning and losing
 round trips, reconciles cash P&L to fills, and measures return dependence and
