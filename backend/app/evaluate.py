@@ -27,7 +27,7 @@ def seed_bootstrap(rows: list[dict], value, draws: int = 10_000, seed: int = 0) 
     """Percentile CI for the pooled mean, resampling whole seeds because scenarios share a seed."""
     groups = {}
     for r in rows:
-        groups.setdefault(r['settings']['seed'], []).append(value(r))
+        groups.setdefault(r.get('settings', {}).get('seed'), []).append(value(r))
     sums = np.array([sum(g) for g in groups.values()])
     counts = np.array([len(g) for g in groups.values()])
     picks = np.random.default_rng(seed).integers(len(sums), size=(draws, len(sums)))
