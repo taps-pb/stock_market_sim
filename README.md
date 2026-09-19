@@ -274,6 +274,22 @@ Restart after replacing the model. Regenerate data and retrain after changing
 market dynamics. Incompatible artifacts fail visibly; an experiment cannot
 start without a compatible model.
 
+## Security and local data
+
+Market Lab is designed for local use. The API has no authentication and allows
+cross-origin requests, so keep the backend bound to `127.0.0.1`. Do not expose it
+directly to the internet without adding authentication, access controls, and a
+restricted CORS policy.
+
+The application needs no broker credentials, exchange keys, or paid data-provider
+account. Included training data, model artifacts, and evaluation reports come from
+fictional simulated markets. Imported historical CSVs and experiment archives stay
+under ignored `backend/data/`; review exported run JSON before sharing it.
+
+The included `model.pkl` is a Python pickle. Load only the artifact shipped with a
+trusted checkout, or one you trained yourself. Never replace it with an untrusted
+pickle.
+
 ## Verification and code map
 
 ```bash
