@@ -9,3 +9,18 @@ enabled = true
 
 [shell_environment_policy]
 set = { CAVEMAN_DEFAULT_MODE = "ultra", PONYTAIL_DEFAULT_MODE = "full" }
+
+[mcp_servers.deepseek_workers]
+command = "node"
+args = ["/Users/taps-pb/Documents/SELF-PROJECTS/stock_market_simulation/tools/deepseek-mcp/server.mjs"]
+cwd = "/Users/taps-pb/Documents/SELF-PROJECTS/stock_market_simulation"
+enabled = true
+required = true
+startup_timeout_sec = 20
+tool_timeout_sec = 300
+enabled_tools = ["check_connection", "run_worker", "run_workers_parallel"]
+
+[mcp_servers.deepseek_workers.env]
+DEEPSEEK_KEY_FILE = "/Users/taps-pb/Documents/work/ds_api.txt"
+DEEPSEEK_MODEL = "deepseek-flash"
+DEEPSEEK_PROJECT_ROOT = "/Users/taps-pb/Documents/SELF-PROJECTS/stock_market_simulation"
