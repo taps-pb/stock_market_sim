@@ -13,7 +13,7 @@ function ReplayChart({ bars }: { bars: ReplaySnapshot['replay']['bars'] }) {
   const series = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']>>();
   useEffect(() => {
     if (!box.current) return;
-    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: '#11181b' }, textColor: '#829995' },
+    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: '#11181b' }, textColor: '#829995', attributionLogo: false },
       grid: { vertLines: { color: '#1d2a2d' }, horzLines: { color: '#1d2a2d' } },
       timeScale: { tickMarkFormatter: (t: Time) => `Day ${Number(t)}` }, localization: { timeFormatter: (t: Time) => `Day ${Number(t)}` } });
     chart.current = c;

@@ -37,11 +37,11 @@ export default function NewExperiment({ open, close, finish }: { open: boolean; 
   const current = replay?.arena ?? arena;
   const running = current && !terminal(current.status);
   return <dialog ref={dialog} className="experiment-dialog" onCancel={close} onClick={event => { if (event.target === dialog.current) close(); }}><form onSubmit={submit}>
-    <div className="dialog-heading"><div className="eyebrow">A NEW MARKET. A FRESH ACCOUNT.</div><button type="button" className="icon-button" onClick={close} aria-label="Close experiment setup">×</button></div>
-    <h1>Start an experiment.</h1>
+    <div className="dialog-heading"><div className="eyebrow">New experiment</div><button type="button" className="icon-button" onClick={close} aria-label="Close experiment setup">×</button></div>
+    <h1>Start an experiment</h1>
     <label>Experiment type<select value={mode} onChange={e => setMode(e.target.value)} disabled={busy}><option value="synthetic">Synthetic exchange</option><option value="historical">Blind historical replay</option></select></label>
     {mode === 'historical' ? <>
-      <p>Compare synthetic-trained Atlas and a real-data model against hidden historical bars.</p>
+      <p>Compare a synthetic-trained Atlas against a real-data model on hidden historical bars.</p>
       <label>Import adjusted daily OHLCV<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }}/></label>
       <div className="form-note">CSV columns: date,symbol,open,high,low,close,volume. Dates: YYYY-MM-DD, ordered within each symbol. Positive OHLC prices, nonnegative volume. Use consistently split/dividend-adjusted prices. Maximum 10 MiB / 100,000 rows. Roughly 800+ sessions per symbol.</div>
       <label>Local dataset<select required value={dataset} onChange={e => setDataset(e.target.value)} disabled={busy}><option value="">Select imported dataset</option>{datasets.map(d => <option key={d.id} value={d.id}>{d.name} · {d.rows.toLocaleString()} rows · {d.start} – {d.end}</option>)}</select></label>
@@ -52,12 +52,12 @@ export default function NewExperiment({ open, close, finish }: { open: boolean; 
     <div className="form-grid"><label>Starting capital · USD<input type="number" min="1000" max="1000000" step="1000" required value={capital} onChange={e => setCapital(Number(e.target.value))}/></label><label>Market seed<input type="number" min="0" max="4294967295" required value={seed} onChange={e => setSeed(Number(e.target.value))}/></label></div>
     <label>Market environment<select value={scenario} onChange={e => setScenario(e.target.value)}><option value="balanced">Balanced · full participant mix</option><option value="volatile">Volatile · more news and liquidity shocks</option><option value="retail">Retail crowd · more FOMO and panic sellers</option></select></label>
     <div className="form-grid"><label>Trading duration<select value={duration} onChange={e => setDuration(Number(e.target.value))}><option value="500">500 ticks · quick experiment</option><option value="1500">1,500 ticks · standard run</option><option value="3000">3,000 ticks · extended run</option></select></label><label>Risk profile<select value={risk} onChange={e => setRisk(e.target.value)}><option value="cautious">Cautious · 30% exposure / 4% stop</option><option value="balanced">Balanced · 60% exposure / 8% stop</option><option value="assertive">Assertive · 90% exposure / 12% stop</option><option value="super_risky">Super risky · FOMO every tick / 90% exposure</option></select></label></div>
-    {risk === 'super_risky' && <div className="notice negative">Pure experimental chaos: Atlas checks every tick, chases every bullish forecast even without a cost edge, keeps buying toward its cap, then dumps on a bearish flip or after three ticks. It accepts 1% entry slippage, takes 50% of visible depth, and risks 30% per stock / 90% total. No automatic account loss halt: it keeps trading through losses until you stop it or it cannot fund a trade. Churn and fees can burn its capital.</div>}
+    {risk === 'super_risky' && <div className="notice negative">High-risk profile: Atlas acts on every tick, enters on any bullish forecast regardless of edge, accumulates to its position cap, and exits on a bearish flip or after three ticks. Assumes 1% entry slippage, takes 50% of visible depth, and risks 30% per stock / 90% total. No automatic account loss halt — it will keep trading through losses until stopped or until it cannot fund a trade. Churn and fees can erode capital.</div>}
     <div className="form-note">60 warmup ticks precede trading. At the end, accounts attempt to close all positions. Unfilled inventory stays visible in the result.</div>
     </>}
-    {running && <div className="notice">The current experiment is still {current.status}. <button className="text-button" type="button" onClick={finish}>Finish it first ↗</button></div>}
+    {running && <div className="notice">The current experiment is still {current.status}. <button className="text-button" type="button" onClick={finish}>Finish it first</button></div>}
     {error && <div role="alert" className="notice negative">{error}</div>}
-    <button className="button primary full-width" type="submit" disabled={busy || !!running || (mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : mode === 'historical' ? 'Train models & start blind replay' : 'Fund accounts & start trading'} <span>↗</span></button>
-    <div className="dialog-footer">SIMULATED CAPITAL ONLY · NO BROKER CONNECTION</div>
+    <button className="button primary full-width" type="submit" disabled={busy || !!running || (mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
+    <div className="dialog-footer">Simulated capital only · No broker connection</div>
   </form></dialog>;
 }

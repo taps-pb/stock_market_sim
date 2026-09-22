@@ -20,15 +20,15 @@ export default function Chart() {
     if (!box.current) return;
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#11181b" }, textColor: "#829995", fontSize: 10 },
-      grid: { vertLines: { color: "#1d2a2d" }, horzLines: { color: "#1d2a2d" } },
-      timeScale: { borderColor: "#27383b", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
+      layout: { background: { type: ColorType.Solid, color: "#F1E4E8" }, textColor: "#2D2D34", fontSize: 10, attributionLogo: false },
+      grid: { vertLines: { color: "#CEB1BE" }, horzLines: { color: "#CEB1BE" } },
+      timeScale: { borderColor: "#CEB1BE", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
       localization: { timeFormatter: (time: Time) => `Tick ${Number(time) * 20}` },
-      rightPriceScale: { borderColor: "#27383b" },
+      rightPriceScale: { borderColor: "#CEB1BE" },
     });
     candle.current = c.addCandlestickSeries({
-      upColor: "#70dfb8", downColor: "#ee898b", borderVisible: false,
-      wickUpColor: "#70dfb8", wickDownColor: "#ee898b",
+      upColor: "#2F7A5B", downColor: "#A3464A", borderVisible: false,
+      wickUpColor: "#2F7A5B", wickDownColor: "#A3464A",
     });
     vol.current = c.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "" });
     vol.current.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
@@ -53,7 +53,7 @@ export default function Chart() {
           time: c.t as UTCTimestamp, open: c.o, high: c.h, low: c.l, close: c.c,
         })));
         vol.current.setData(cs.map((c) => ({
-          time: c.t as UTCTimestamp, value: c.v, color: c.c >= c.o ? "#26a67a55" : "#e0556155",
+          time: c.t as UTCTimestamp, value: c.v, color: c.c >= c.o ? "#2F7A5B55" : "#A3464A55",
         })));
         if (first && cs.length) { chart.current?.timeScale().fitContent(); first = false; }
       }).catch(() => {});
@@ -66,9 +66,9 @@ export default function Chart() {
     const series = candle.current;
     if (!series || !forecast) return;
     const lines = [
-      { price: forecast.price, title: "Forecast median", color: "#9db7ff" },
-      { price: forecast.lower, title: "Forecast low", color: "#526995" },
-      { price: forecast.upper, title: "Forecast high", color: "#526995" },
+      { price: forecast.price, title: "Forecast median", color: "#B97375" },
+      { price: forecast.lower, title: "Forecast low", color: "#2D2D34" },
+      { price: forecast.upper, title: "Forecast high", color: "#2D2D34" },
     ].map((line) => series.createPriceLine({ ...line, lineWidth: 1, lineStyle: LineStyle.Dashed }));
     return () => {
       if (candle.current === series) lines.forEach((line) => series.removePriceLine(line));
@@ -80,7 +80,7 @@ export default function Chart() {
       <h2>
         {selected}
         {phase && <span className={`phase ${phase}`} title="Simulator insight; hidden from the forecast model">
-          smart money: {phase}
+          phase: {phase}
         </span>}
       </h2>
       <div ref={box} className="chartbox" />

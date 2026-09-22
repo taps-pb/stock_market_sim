@@ -28,10 +28,10 @@ export default function Groups() {
   const retailCount = retail.reduce((s, g) => s + g.count, 0);
   const fear = retail.reduce((s, g) => s + g.fear * g.count, 0) / Math.max(1, retailCount);
   return <>
-    <div className="page-heading"><div><div className="eyebrow">THE OTHER SIDE OF EVERY TRADE</div><h1>A market made of different minds.</h1><p>Every participant has its own capital, conviction, horizon and emotional state.</p></div><span className="version-tag">OBSERVER VIEW</span></div>
+    <div className="page-heading"><div><div className="eyebrow">Market participants</div><h1>Participant mix</h1><p>Each participant class has its own capital, horizon, and reaction model.</p></div><span className="version-tag">Observer view</span></div>
     <div className="population-summary"><div><span>Independent traders</span><strong>{total}</strong></div><div><span>Starting participant capital</span><strong>{money(capital)}</strong></div><div><span>Retail crowd</span><strong>{retailCount}<small> traders</small></strong></div><div><span>Retail fear</span><strong>{(fear * 100).toFixed(0)}<small> / 100</small></strong></div></div>
     <div className="notice">This is an observer's view into the simulation. Atlas cannot see individual emotions, institutional phases or hidden intrinsic values.</div>
-    <section className="panel population-panel"><div className="panel-heading"><div><h2>The participant landscape</h2><p>Capital is concentrated. Reactions are not.</p></div><span className="quiet-label">14 BEHAVIOR TYPES</span></div>
+    <section className="panel population-panel"><div className="panel-heading"><div><h2>Participant breakdown</h2><p>Capital and flow by class.</p></div><span className="quiet-label">14 behavior types</span></div>
       <div className="table-scroll"><table><thead><tr><th>Participant</th><th>Traders</th><th>Starting capital</th><th>Buy / sell flow</th><th>Fear</th><th className="align-right">Group return</th></tr></thead><tbody>{groups.map((g, i) => {
         const [name, description] = descriptions[g.name] ?? [g.name, ''];
         const share = g.buy_volume / (g.buy_volume + g.sell_volume || 1) * 100;
