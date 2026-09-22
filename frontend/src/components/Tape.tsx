@@ -10,10 +10,10 @@ export default function Tape() {
       <table>
         <tbody>
           {trades.map((t, i) => (
-            <tr key={i}>
-              <td className={t.aggressor === "BUY" ? "up" : "down"}>{t.price.toFixed(2)}</td>
-              <td className="q">{t.qty}</td>
-              <td className="side">{t.aggressor === "BUY" ? "▲ buy" : "▼ sell"}</td>
+            <tr key={i} className="data-row">
+              <td data-label="Price" className={t.aggressor === "BUY" ? "up" : "down"}>{t.price.toFixed(2)}</td>
+              <td data-label="Quantity" className="q">{t.qty}</td>
+              <td data-label="Side" className="side">{t.aggressor === "BUY" ? "▲ buy" : "▼ sell"}</td>
             </tr>
           ))}
         </tbody>

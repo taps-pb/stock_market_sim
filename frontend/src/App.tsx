@@ -15,7 +15,7 @@ import DepthLadder from './components/DepthLadder';
 import Tape from './components/Tape';
 import ReplayView from './components/ReplayView';
 
-const views = [['arena', 'Live arena', 'arena'], ['participants', 'Market participants', 'people'], ['history', 'Run history', 'history'], ['desk', 'Manual trading desk', 'chart']] as const;
+const views = [['arena', 'Live arena', 'arena', 'Live'], ['participants', 'Market participants', 'people', 'People'], ['history', 'Run history', 'history', 'History'], ['desk', 'Manual trading desk', 'chart', 'Trade']] as const;
 function Icon({ name }: { name: string }) {
   const paths: Record<string, string> = {
     arena: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -54,14 +54,31 @@ export default function App() {
       <nav>{views.map(([id, label, icon]) => <button key={id} onClick={() => setView(id)} aria-label={label} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined}><Icon name={icon}/><span>{label}</span>{id === 'arena' && <i className="nav-live"/>}</button>)}</nav>
       <div className="sidebar-experiment"><div className="eyebrow">Current experiment</div><strong>{replay ? 'Historical replay' : snap ? money(snap.arena.settings.capital) : '—'}</strong><p>{replay ? 'Two frozen models' : 'Atlas + buy-and-hold'}<br/>Seed {arena?.settings.seed ?? '—'} · <span className="capitalize">{replay ? 'Daily OHLCV' : snap?.arena.settings.scenario ?? 'balanced'}</span></p><button className="button primary full-width" onClick={() => setSetup(true)}>New experiment</button></div>
     </aside>
-    <div className="main-shell">
-      <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{activeView?.[1]}</strong></div><div className="topbar-controls">
-        <span className={`status-label ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? replay ? 'REPLAY RUNNING' : 'MARKET LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
-        <div className="segmented speed-control" aria-label="Simulation speed">{[1, 5, 20].map(speed => <button key={speed} disabled={busy || !connected} onClick={() => act('speed', speed)} className={arena?.speed === speed ? 'active' : ''} aria-pressed={arena?.speed === speed}>{speed}×</button>)}</div>
-        <button className="button compact-button" onClick={() => act(arena?.status === 'paused' ? 'resume' : 'pause')} disabled={busy || !connected || done || arena?.status === 'settling'}>{arena?.status === 'paused' ? 'Resume' : 'Pause'}</button>
-        <button className="button compact-button finish-button" onClick={() => act('finish')} disabled={busy || !connected || done || arena?.status === 'settling'}>Finish run</button>
-        <button className="button compact-button mobile-fund" onClick={() => setSetup(true)}>New experiment</button>
-      </div></header>
+    <div className={`main-shell view-shell-${view}`}>
+      <header className="topbar">
+        <span className="mobile-brand"><span className="brand-mark"><i/><i/><i/></span>Market Lab</span>
+        <div className="breadcrumb">Workspace <span>/</span> <strong>{activeView?.[1]}</strong></div>
+        <span className={`mobile-status ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? 'LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
+        <div className="topbar-controls">
+          <div className="desktop-controls">
+            <span className={`status-label ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? replay ? 'REPLAY RUNNING' : 'MARKET LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
+            <div className="segmented speed-control" aria-label="Simulation speed">{[1, 5, 20].map(speed => <button key={speed} disabled={busy || !connected} onClick={() => act('speed', speed)} className={arena?.speed === speed ? 'active' : ''} aria-pressed={arena?.speed === speed}>{speed}×</button>)}</div>
+            <button className="button compact-button" onClick={() => act(arena?.status === 'paused' ? 'resume' : 'pause')} disabled={busy || !connected || done || arena?.status === 'settling'}>{arena?.status === 'paused' ? 'Resume' : 'Pause'}</button>
+            <button className="button compact-button finish-button" onClick={() => act('finish')} disabled={busy || !connected || done || arena?.status === 'settling'}>Finish run</button>
+            <button className="button compact-button mobile-fund" onClick={() => setSetup(true)}>New experiment</button>
+          </div>
+          <details className="mobile-run-controls">
+            <summary className="mobile-run-summary" aria-label="Run controls"><span aria-hidden="true">•••</span></summary>
+            <div className="mobile-run-menu">
+              <span className={`status-label ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? replay ? 'REPLAY RUNNING' : 'MARKET LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
+              <div className="segmented speed-control" aria-label="Simulation speed">{[1, 5, 20].map(speed => <button key={speed} disabled={busy || !connected} onClick={() => act('speed', speed)} className={arena?.speed === speed ? 'active' : ''} aria-pressed={arena?.speed === speed}>{speed}×</button>)}</div>
+              <button className="button compact-button" onClick={() => act(arena?.status === 'paused' ? 'resume' : 'pause')} disabled={busy || !connected || done || arena?.status === 'settling'}>{arena?.status === 'paused' ? 'Resume' : 'Pause'}</button>
+              <button className="button compact-button finish-button" onClick={() => act('finish')} disabled={busy || !connected || done || arena?.status === 'settling'}>Finish run</button>
+              <button className="button compact-button" onClick={() => setSetup(true)}>New experiment</button>
+            </div>
+          </details>
+        </div>
+      </header>
       <section className="ticker" aria-label="Market prices">
         {(snap?.symbols ?? []).slice(0, 6).map(s => {
           const change = (s.last / s.open - 1) * 100;
@@ -73,17 +90,20 @@ export default function App() {
           </button>;
         })}
       </section>
-      <main className="workspace-content">
+      <main className={`workspace-content view-${view}`}>
         {error && <div className="notice negative" role="alert">{error}<button onClick={() => setError('')} className="icon-button" aria-label="Dismiss error">×</button></div>}
         {view === 'arena' && (replay ? <ReplayView snapshot={replay}/> : <ArenaView onControl={act}/>)}
         {view === 'participants' && (replay ? <div className="notice">Historical replay follows recorded bars. Synthetic participants are available in synthetic experiments.</div> : <Groups/>)}
         {view === 'history' && <RunHistory/>}
         {view === 'desk' && replay && <div className="notice">Historical replay measures forecasts and illustrative paper trades. Manual orders require a synthetic experiment.</div>}
-        {view === 'desk' && !replay && <>
+        {view === 'desk' && !replay && <section className="desk-view">
           <div className="page-heading"><div><div className="eyebrow">Manual trading</div><h1>Trade alongside the agent</h1><p>Your orders affect the same market. Your account is separate from Atlas.</p></div><span className="version-tag">Manual orders</span></div>
           <Watchlist/><div className="manual-grid"><Chart/><div className="market-side"><TradeTicket/><DepthLadder/></div></div><div className="lower-grid"><PortfolioView/><Tape/></div>
-        </>}
+        </section>}
       </main>
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        {views.map(([id, label, icon, shortLabel]) => <button key={id} onClick={() => setView(id)} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined} aria-label={label}><Icon name={icon}/><span>{shortLabel}</span></button>)}
+      </nav>
       <footer className="workspace-footer"><span><i className="dot teal"/> Market Lab <b>/</b> Simulated trading experiments</span><span>{replay ? 'Historical data · Simulated trades' : 'Simulated market · No real funds'} · <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">Charts powered by TradingView</a></span></footer>
     </div>
     <NewExperiment open={setup} close={() => { setSetup(false); setView('arena'); }} finish={() => act('finish')}/>

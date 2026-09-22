@@ -24,13 +24,13 @@ export default function PortfolioView() {
         <thead><tr><th>sym</th><th>sh</th><th>avg</th><th>last</th><th>P&amp;L</th></tr></thead>
         <tbody>
           {p.positions.map((x) => (
-            <tr key={x.symbol}>
-              <td>{x.symbol}</td><td>{x.shares}</td><td>{x.avg.toFixed(2)}</td>
-              <td>{x.last.toFixed(2)}</td>
-              <td className={x.pnl >= 0 ? "up" : "down"}>{x.pnl.toFixed(0)}</td>
+            <tr key={x.symbol} className="data-row">
+              <td data-label="Symbol">{x.symbol}</td><td data-label="Shares">{x.shares}</td><td data-label="Average">{x.avg.toFixed(2)}</td>
+              <td data-label="Last">{x.last.toFixed(2)}</td>
+              <td data-label="P&amp;L" className={x.pnl >= 0 ? "up" : "down"}>{x.pnl.toFixed(0)}</td>
             </tr>
           ))}
-          {p.positions.length === 0 && <tr><td colSpan={5} className="muted">no positions</td></tr>}
+          {p.positions.length === 0 && <tr className="data-row empty-row"><td colSpan={5} className="muted">no positions</td></tr>}
         </tbody>
       </table>
       {p.orders.length > 0 && <h2 className="orders-title">Open orders · until cancelled</h2>}

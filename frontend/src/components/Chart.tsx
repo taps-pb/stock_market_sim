@@ -20,7 +20,7 @@ export default function Chart() {
     if (!box.current) return;
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#F3F7F9" }, textColor: "#26343D", fontSize: 10, attributionLogo: false },
+      layout: { background: { type: ColorType.Solid, color: "#F3F7F9" }, textColor: "#26343D", fontSize: 12, attributionLogo: false },
       grid: { vertLines: { color: "#D8E3E8" }, horzLines: { color: "#D8E3E8" } },
       timeScale: { borderColor: "#C9D8E0", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
       localization: { timeFormatter: (time: Time) => `Tick ${Number(time) * 20}` },
