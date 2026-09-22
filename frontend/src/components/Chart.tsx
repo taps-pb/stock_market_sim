@@ -20,11 +20,11 @@ export default function Chart() {
     if (!box.current) return;
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#F1E4E8" }, textColor: "#2D2D34", fontSize: 10, attributionLogo: false },
-      grid: { vertLines: { color: "#CEB1BE" }, horzLines: { color: "#CEB1BE" } },
-      timeScale: { borderColor: "#CEB1BE", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
+      layout: { background: { type: ColorType.Solid, color: "#F3F7F9" }, textColor: "#26343D", fontSize: 10, attributionLogo: false },
+      grid: { vertLines: { color: "#D8E3E8" }, horzLines: { color: "#D8E3E8" } },
+      timeScale: { borderColor: "#C9D8E0", tickMarkFormatter: (time: Time) => `T${Number(time) * 20}` },
       localization: { timeFormatter: (time: Time) => `Tick ${Number(time) * 20}` },
-      rightPriceScale: { borderColor: "#CEB1BE" },
+      rightPriceScale: { borderColor: "#C9D8E0" },
     });
     candle.current = c.addCandlestickSeries({
       upColor: "#2F7A5B", downColor: "#A3464A", borderVisible: false,
@@ -66,9 +66,9 @@ export default function Chart() {
     const series = candle.current;
     if (!series || !forecast) return;
     const lines = [
-      { price: forecast.price, title: "Forecast median", color: "#B97375" },
-      { price: forecast.lower, title: "Forecast low", color: "#2D2D34" },
-      { price: forecast.upper, title: "Forecast high", color: "#2D2D34" },
+      { price: forecast.price, title: "Forecast median", color: "#557A95" },
+      { price: forecast.lower, title: "Forecast low", color: "#26343D" },
+      { price: forecast.upper, title: "Forecast high", color: "#26343D" },
     ].map((line) => series.createPriceLine({ ...line, lineWidth: 1, lineStyle: LineStyle.Dashed }));
     return () => {
       if (candle.current === series) lines.forEach((line) => series.removePriceLine(line));

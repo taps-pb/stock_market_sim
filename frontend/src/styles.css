@@ -267,6 +267,28 @@ td small{color:var(--muted)}
 .experiment-dialog label,.ticket label{color:var(--ink)}
 .experiment-dialog input,.experiment-dialog select,.ticket input{background:#FFFFFF;border:1px solid var(--line);color:var(--ink)}
 .experiment-dialog input:focus,.experiment-dialog select:focus,.ticket input:focus{border-color:var(--accent);outline:none}
+.experiment-dialog select,.history-filter select{
+  appearance:none;
+  min-height:46px;
+  padding:0 46px 0 15px;
+  border:0;
+  border-radius:14px;
+  background-color:#F8F2F4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23B97375' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 15px center;
+  box-shadow:inset 0 0 0 1px rgba(185,115,117,.16),0 5px 14px rgba(45,45,52,.05);
+  cursor:pointer;
+  transition:background-color .15s,box-shadow .15s;
+}
+.experiment-dialog select:hover,.history-filter select:hover{background-color:#F1E4E8}
+.experiment-dialog select:focus,.history-filter select:focus{
+  border:0;
+  box-shadow:inset 0 0 0 2px var(--accent),0 7px 18px rgba(185,115,117,.14);
+}
+.experiment-dialog select:disabled,.history-filter select:disabled{cursor:not-allowed;opacity:.55}
+.experiment-dialog select option,.history-filter select option{background:#FFFFFF;color:var(--ink)}
+.history-filter{display:flex;align-items:center;gap:10px;width:max-content;margin-bottom:18px;color:var(--ink)}
 .form-note{color:var(--muted)}
 .dialog-footer{color:var(--muted)}
 .btns button{background:#E3F0E8;border:1px solid #B7D6C4;color:var(--green)}
@@ -739,3 +761,179 @@ html,body{overflow-x:hidden;max-width:100%}
   .topbar-controls{max-width:100%;min-width:0}
   .topbar .button,.topbar .segmented{flex-shrink:0}
 }
+
+/* ===== NEW EXPERIMENT DIALOG ===== */
+.experiment-dialog{
+  width:min(880px,calc(100% - 32px))!important;
+  max-height:calc(100vh - 32px);
+  padding:48px 52px 34px!important;
+  overflow:auto;
+  border:1px solid var(--line)!important;
+  border-radius:26px!important;
+  background:#FFFDFD!important;
+  color:var(--ink)!important;
+}
+.experiment-dialog .dialog-heading{margin-bottom:28px}
+.experiment-dialog .dialog-heading .eyebrow{font-size:13px;letter-spacing:.12em;color:var(--muted);font-weight:650}
+.experiment-dialog .icon-button{
+  width:40px;height:40px;border-radius:50%;background:var(--blush,#F1E4E8);color:var(--muted);
+  font-size:22px;line-height:1;display:inline-grid;place-items:center;
+}
+.experiment-dialog .icon-button:hover{background:#F1E4E8;color:var(--ink)}
+.experiment-dialog h1{font-size:42px;line-height:1.08;letter-spacing:-1.6px;font-weight:650;margin:0 0 28px}
+.experiment-dialog form>p,.experiment-dialog .experiment-intro{
+  margin:26px 0 32px;padding:18px 20px;border-radius:16px;background:#FAF5F6;
+  color:var(--muted);font-size:17px;line-height:1.65;
+}
+.experiment-dialog .form-note,.experiment-dialog .experiment-note{
+  margin:0 0 26px;padding:17px 19px;border-left:3px solid var(--accent);border-radius:4px 14px 14px 4px;
+  background:#FAF5F6;color:var(--muted);font-size:15px;line-height:1.65;
+}
+.experiment-dialog label{gap:10px;margin-bottom:22px;color:var(--ink);font-size:16px;font-weight:600}
+.experiment-dialog .form-grid{gap:24px 20px}
+.experiment-dialog select{min-height:62px;padding:0 52px 0 18px;border-radius:17px;font-size:17px}
+.experiment-dialog .number-control{
+  display:grid;grid-template-columns:46px 1fr 46px;align-items:center;
+  width:100%;min-width:0;min-height:62px;overflow:hidden;border:0;border-radius:17px;
+  background:#F8F2F4;
+  box-shadow:inset 0 0 0 1px rgba(185,115,117,.16),0 5px 14px rgba(45,45,52,.05);
+  transition:background-color .15s,box-shadow .15s;
+}
+.experiment-dialog .number-control:hover{background:#F1E4E8}
+.experiment-dialog .number-control:focus-within{box-shadow:inset 0 0 0 2px var(--accent),0 7px 18px rgba(185,115,117,.14)}
+.experiment-dialog .number-control input{
+  width:100%;min-width:0;height:100%;padding:0!important;border:0!important;border-radius:0!important;
+  outline:0!important;background:transparent!important;box-shadow:none!important;color:var(--ink);
+  text-align:center;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.experiment-dialog .number-control input::-webkit-outer-spin-button,
+.experiment-dialog .number-control input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.experiment-dialog .step{
+  width:38px;height:38px;margin:auto;padding:0;border:0;border-radius:12px;
+  background:rgba(255,255,255,.62);color:#9F6063;font-size:20px;line-height:1;
+  display:inline-grid;place-items:center;transition:background-color .15s;
+}
+.experiment-dialog .step:hover{background:#FFFFFF}
+.experiment-dialog .step:active{background:#F1E4E8}
+.experiment-dialog label>input[type="number"],.experiment-dialog label>input[type="text"],.experiment-dialog input[type="file"]{
+  min-height:62px;padding:0 18px;border:0!important;border-radius:17px!important;
+  background:#F8F2F4!important;color:var(--ink)!important;font-size:17px;
+  box-shadow:inset 0 0 0 1px rgba(185,115,117,.16),0 5px 14px rgba(45,45,52,.05);
+  transition:background-color .15s,box-shadow .15s;
+}
+.experiment-dialog input[type="file"]{padding:14px 16px;line-height:1.5}
+.experiment-dialog label>input[type="number"]:hover,.experiment-dialog label>input[type="text"]:hover,
+.experiment-dialog input[type="file"]:hover{background:#F1E4E8!important}
+.experiment-dialog label>input[type="number"]:focus,.experiment-dialog label>input[type="text"]:focus,
+.experiment-dialog input[type="file"]:focus{
+  border:0!important;outline:0!important;
+  box-shadow:inset 0 0 0 2px var(--accent),0 7px 18px rgba(185,115,117,.14);
+}
+.experiment-dialog .hint{display:block;margin-top:-4px;color:var(--muted);font-size:13px;line-height:1.5;font-weight:400}
+.experiment-dialog .notice{margin:18px 0;padding:16px 18px;border-radius:14px;font-size:14px;line-height:1.65}
+.experiment-dialog .button.full-width{
+  min-height:60px;border-radius:15px;font-size:17px;font-weight:650;justify-content:center;
+  box-shadow:0 12px 25px rgba(185,115,117,.22);
+}
+.experiment-dialog .dialog-footer{margin-top:20px;color:var(--muted);font-size:12px;letter-spacing:1.1px}
+.experiment-dialog :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media (max-width:520px){
+  .experiment-dialog{
+    width:100%!important;max-width:100%!important;min-height:100vh;max-height:100vh;
+    padding:32px 20px 24px!important;border:0!important;border-radius:0!important;
+  }
+  .experiment-dialog h1{font-size:34px;letter-spacing:-1px}
+  .experiment-dialog .form-grid{grid-template-columns:1fr;gap:0}
+  .experiment-dialog label{font-size:15px}
+  .experiment-dialog form>p,.experiment-dialog .experiment-intro{font-size:16px}
+  .experiment-dialog .form-note,.experiment-dialog .experiment-note{font-size:14px}
+  .experiment-dialog .number-control input{font-size:17px}
+  .experiment-dialog .button.full-width{font-size:16px}
+}
+
+/* ===== COOL LIGHT COLOR SYSTEM ===== */
+:root{
+  --bg:#EDF3F6;
+  --panel:#FFFFFF;
+  --surface-2:#DEE8ED;
+  --line:#C9D8E0;
+  --accent:#557A95;
+  --accent-ink:#FFFFFF;
+  --ink:#26343D;
+  --muted:#64747D;
+  --red:#B45E66;
+  --green:#3E7C61;
+  --amber:#B88345;
+  --primary:#557A95;
+  --primary-dark:#456A84;
+  --primary-soft:#E3EDF2;
+  --secondary:#A8C9DA;
+  --secondary-soft:#E8F2F7;
+  --blush:#E3EDF2;
+  --rose:#557A95;
+  color:#26343D;
+  background:#EDF3F6;
+  color-scheme:light;
+}
+body{background:#E8EFF2;color:var(--ink)}
+::selection{background:var(--accent);color:#FFFFFF}
+.app-shell,.main-shell{background:#F2F6F7}
+.app-shell::after,.sidebar{background:#DFE8ED!important}
+.sidebar{color:#465D6A}
+.sidebar .brand-mark i{background:var(--accent)}
+.sidebar nav button{color:#58707E}
+.sidebar nav button:hover{background:#CEDDE4;color:var(--ink)}
+.sidebar nav button.selected{background:var(--accent);color:#FFFFFF}
+.sidebar nav button.selected::before{background:var(--secondary)}
+.topbar .button,.topbar .segmented,.ticker,.panel,.metrics-grid,.population-summary{background:#FFFFFF}
+.topbar .button.primary,.button.primary{background:var(--accent);border-color:var(--accent);color:#FFFFFF;box-shadow:0 6px 18px rgba(85,122,149,.2)}
+.topbar .button.primary:hover:not(:disabled),.button.primary:hover:not(:disabled){background:var(--primary-dark);border-color:var(--primary-dark)}
+.topbar .button:hover:not(:disabled),.button:hover:not(:disabled){background:#EDF3F6;border-color:var(--accent)}
+.topbar .segmented button.active{background:var(--primary-soft);color:var(--ink)}
+.ticker{box-shadow:0 10px 30px rgba(38,52,61,.07)}
+.ticker-item{border-color:#E4ECEF}
+.ticker-item:hover{background:#F4F8FA}
+.workspace-content::before{background:var(--secondary);opacity:.14}
+.panel,.metrics-grid,.population-summary{box-shadow:0 12px 34px rgba(38,52,61,.07)}
+.metric{border-color:#E7EEF1!important}
+.gridline{stroke:#D8E3E8}
+.cursor-line{stroke:var(--accent)}
+.risk-track,.progress-track,.flow-bar,.fear-gauge,.pill,.outcome-badge.flat{background:#DEE8ED}
+.phase,.forecast-range,th,.order-side,.participant-avatar,.tier-large{background:#EDF3F6}
+th{border-color:#DDE7EB!important}
+td{border-color:#E7EEF1!important}
+.market-chip:hover{background:#F4F8FA}
+.market-chip.selected{background:#E3EDF2!important;box-shadow:0 8px 22px rgba(85,122,149,.16)}
+.agent-panel{background:var(--secondary-soft)!important}
+.agent-panel .agent-mark{box-shadow:0 6px 18px rgba(168,201,218,.2)}
+.agent-panel .allocation{border-color:#CBDDE7!important}
+.allocation-ring>span{background:var(--secondary-soft)!important}
+.allocation-ring>span{display:grid!important;place-content:center;grid-auto-flow:column;text-align:center}
+.notice{background:#E7F0F4!important;box-shadow:0 6px 20px rgba(38,52,61,.05)}
+.warmup-notice{background:#F5EEDF;border-color:#E6D5B5}
+.metrics-grid.arena-summary>.metric.hero{background:#E7F0EB}
+.result-banner{background:#E7F0EB}
+.version-tag,.title-row.arena-headline .run-id{box-shadow:0 4px 16px rgba(38,52,61,.06)}
+.experiment-dialog{background:#FCFDFD!important;box-shadow:0 30px 90px rgba(38,52,61,.25)!important}
+.experiment-dialog::backdrop{background:rgba(38,52,61,.32)!important}
+.experiment-dialog select,.history-filter select{
+  background-color:#EEF4F6;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23557A95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  box-shadow:inset 0 0 0 1px rgba(85,122,149,.18),0 5px 14px rgba(38,52,61,.05);
+}
+.experiment-dialog select:hover,.history-filter select:hover{background-color:#E3EDF2}
+.experiment-dialog select:focus,.history-filter select:focus{box-shadow:inset 0 0 0 2px var(--accent),0 7px 18px rgba(85,122,149,.15)}
+.experiment-dialog .icon-button{background:var(--primary-soft)}
+.experiment-dialog .icon-button:hover{background:#D6E4EB}
+.experiment-dialog form>p,.experiment-dialog .experiment-intro,.experiment-dialog .form-note,.experiment-dialog .experiment-note{background:#F3F7F9}
+.experiment-dialog .number-control,.experiment-dialog label>input[type="number"],.experiment-dialog label>input[type="text"],.experiment-dialog input[type="file"]{
+  background:#EEF4F6!important;
+  box-shadow:inset 0 0 0 1px rgba(85,122,149,.18),0 5px 14px rgba(38,52,61,.05);
+}
+.experiment-dialog .number-control:hover,.experiment-dialog label>input[type="number"]:hover,.experiment-dialog label>input[type="text"]:hover,.experiment-dialog input[type="file"]:hover{background:#E3EDF2!important}
+.experiment-dialog .number-control:focus-within,.experiment-dialog label>input[type="number"]:focus,.experiment-dialog label>input[type="text"]:focus,.experiment-dialog input[type="file"]:focus{box-shadow:inset 0 0 0 2px var(--accent),0 7px 18px rgba(85,122,149,.15)}
+.experiment-dialog .step{color:var(--primary-dark)}
+.experiment-dialog .step:active{background:#DCE8ED}
+.experiment-dialog .button.full-width{box-shadow:0 12px 25px rgba(85,122,149,.22)}

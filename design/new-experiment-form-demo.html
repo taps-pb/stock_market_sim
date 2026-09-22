@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Market Lab · New experiment form concept</title>
+  <style>
+    :root{--canvas:#e7dfe2;--surface:#fffdfd;--field:#f6ecef;--field-hover:#f1e4e8;--rose:#b97375;--rose-dark:#9f6063;--ink:#2d2d34;--muted:#6f666d;--line:#e6ccd3;--shadow:0 30px 80px rgba(45,45,52,.22)}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;padding:36px 18px;background:radial-gradient(circle at 18% 8%,#f1e4e8 0,transparent 34%),var(--canvas);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,select,input{font:inherit;color:inherit}
+    .dialog{width:min(880px,100%);margin:auto;padding:54px 56px 38px;background:rgba(255,253,253,.97);border-radius:38px;box-shadow:var(--shadow)}
+    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+    .eyebrow{font-size:13px;font-weight:750;letter-spacing:.16em;text-transform:uppercase;color:var(--rose-dark)}
+    .close{width:44px;height:44px;border:0;border-radius:50%;background:var(--field);font-size:30px;line-height:1;color:var(--muted);cursor:pointer}
+    h1{margin:0 0 30px;font-size:44px;line-height:1.05;letter-spacing:-1.8px}
+    .intro{margin:26px 0 34px;padding:18px 20px;border-radius:18px;background:#faf5f6;color:var(--muted);font-size:17px;line-height:1.65}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 20px}
+    .field{display:grid;gap:10px;min-width:0}
+    .field.full{grid-column:1/-1}
+    label{font-size:16px;font-weight:650}
+    select,.number-control{width:100%;min-height:62px;border:1px solid var(--line);border-radius:18px;background:var(--field);box-shadow:0 8px 20px rgba(45,45,52,.045);transition:.15s ease}
+    select{appearance:none;padding:0 54px 0 18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23b97375' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 18px center;font-size:17px;cursor:pointer}
+    select:hover,.number-control:hover{background-color:var(--field-hover);border-color:#dab6c0}
+    select:focus-visible,.number-control:focus-within{outline:3px solid rgba(185,115,117,.18);border-color:var(--rose)}
+    .number-control{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;overflow:hidden}
+    .number-control input{width:100%;min-width:0;border:0;outline:0;background:transparent;text-align:center;font-size:18px;font-weight:650;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+    .number-control input::-webkit-inner-spin-button{display:none}
+    .step{height:40px;width:40px;margin:auto;border:0;border-radius:12px;background:rgba(255,255,255,.62);color:var(--rose-dark);font-size:23px;cursor:pointer}
+    .step:hover{background:#fff}
+    .hint{font-size:13px;line-height:1.45;color:var(--muted)}
+    .note{margin:30px 0 26px;padding:18px 20px;border-left:4px solid var(--rose);border-radius:4px 16px 16px 4px;background:#faf5f6;color:var(--muted);font-size:15px;line-height:1.6}
+    .submit{width:100%;min-height:60px;border:0;border-radius:16px;background:var(--rose);color:white;font-size:17px;font-weight:750;box-shadow:0 12px 25px rgba(185,115,117,.25);cursor:pointer}
+    .submit:hover{background:var(--rose-dark)}
+    footer{text-align:center;margin-top:24px;color:var(--muted);font-size:12px;letter-spacing:.14em}
+    @media(max-width:650px){body{padding:0}.dialog{min-height:100vh;border-radius:0;padding:32px 20px}h1{font-size:34px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.intro{font-size:16px}.top{margin-bottom:24px}}
+  </style>
+</head>
+<body>
+  <main class="dialog" aria-labelledby="title">
+    <div class="top"><span class="eyebrow">New experiment</span><button class="close" aria-label="Close">×</button></div>
+    <h1 id="title">Start an experiment</h1>
+    <div class="grid">
+      <div class="field full">
+        <label for="type">Experiment type</label>
+        <select id="type"><option>Synthetic exchange</option><option>Blind historical replay</option></select>
+      </div>
+    </div>
+    <p class="intro">Atlas and buy-and-hold receive the same starting capital. Both trade in the same order book.</p>
+    <div class="grid">
+      <div class="field">
+        <label for="capital">Starting capital · USD</label>
+        <div class="number-control">
+          <button class="step" type="button" data-target="capital" data-step="-1000" aria-label="Decrease starting capital">−</button>
+          <input id="capital" type="number" value="100000" step="1000" aria-describedby="capital-hint">
+          <button class="step" type="button" data-target="capital" data-step="1000" aria-label="Increase starting capital">+</button>
+        </div>
+        <span class="hint" id="capital-hint">Between $1,000 and $1,000,000</span>
+      </div>
+      <div class="field">
+        <label for="seed">Market seed</label>
+        <div class="number-control">
+          <button class="step" type="button" data-target="seed" data-step="-1" aria-label="Decrease market seed">−</button>
+          <input id="seed" type="number" value="101" step="1">
+          <button class="step" type="button" data-target="seed" data-step="1" aria-label="Increase market seed">+</button>
+        </div>
+        <span class="hint">Reuse a seed to replay market conditions</span>
+      </div>
+      <div class="field full">
+        <label for="market">Market environment</label>
+        <select id="market"><option>Balanced · full participant mix</option><option>Volatile · more news and liquidity shocks</option><option>Retail crowd · more FOMO and panic sellers</option></select>
+      </div>
+      <div class="field">
+        <label for="duration">Trading duration</label>
+        <select id="duration"><option>500 ticks · quick experiment</option><option selected>1,500 ticks · standard run</option><option>3,000 ticks · extended run</option></select>
+      </div>
+      <div class="field">
+        <label for="risk">Risk profile</label>
+        <select id="risk"><option>Cautious</option><option selected>Balanced</option><option>Assertive</option><option>Super risky</option></select>
+      </div>
+    </div>
+    <p class="note"><strong>Before trading:</strong> 60 warmup ticks establish market conditions. At the end, accounts attempt to close all positions; unfilled inventory remains visible in the result.</p>
+    <button class="submit">Start experiment</button>
+    <footer>Simulated capital only · No broker connection</footer>
+  </main>
+  <script>
+    document.querySelectorAll('.step').forEach(button => button.addEventListener('click', () => {
+      const input = document.getElementById(button.dataset.target);
+      input.value = Number(input.value || 0) + Number(button.dataset.step);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }));
+  </script>
+</body>
+</html>

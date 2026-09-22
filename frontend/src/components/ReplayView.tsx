@@ -13,12 +13,12 @@ function ReplayChart({ bars }: { bars: ReplaySnapshot['replay']['bars'] }) {
   const series = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']>>();
   useEffect(() => {
     if (!box.current) return;
-    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: '#11181b' }, textColor: '#829995', attributionLogo: false },
-      grid: { vertLines: { color: '#1d2a2d' }, horzLines: { color: '#1d2a2d' } },
+    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: '#F3F7F9' }, textColor: '#64747D', attributionLogo: false },
+      grid: { vertLines: { color: '#D8E3E8' }, horzLines: { color: '#D8E3E8' } },
       timeScale: { tickMarkFormatter: (t: Time) => `Day ${Number(t)}` }, localization: { timeFormatter: (t: Time) => `Day ${Number(t)}` } });
     chart.current = c;
     fitted.current = false;
-    series.current = c.addCandlestickSeries({ upColor: '#70dfb8', downColor: '#ee898b', borderVisible: false, wickUpColor: '#70dfb8', wickDownColor: '#ee898b' });
+    series.current = c.addCandlestickSeries({ upColor: '#3E7C61', downColor: '#B45E66', borderVisible: false, wickUpColor: '#3E7C61', wickDownColor: '#B45E66' });
     return () => { series.current = undefined; chart.current = undefined; c.remove(); };
   }, []);
   useEffect(() => {

@@ -46,7 +46,7 @@ export default function RunHistory() {
   const wins = settled.filter(r => r.agent.net_pnl > 0).length, losses = settled.filter(r => r.agent.net_pnl < 0).length;
   return <>
     <div className="page-heading"><div><div className="eyebrow">Run history</div><h1>Saved experiments</h1><p>{total} saved runs. Synthetic trading and historical replay evidence are kept separate.</p></div><span className="version-tag">Local storage</span></div>
-    <label>Experiment type<select value={kind} onChange={e => { setKind(e.target.value); setOffset(0); }}><option value="">All experiments</option><option value="synthetic">Synthetic exchange</option><option value="historical">Historical replay</option></select></label>
+    <label className="history-filter">Experiment type<select value={kind} onChange={e => { setKind(e.target.value); setOffset(0); }}><option value="">All experiments</option><option value="synthetic">Synthetic exchange</option><option value="historical">Historical replay</option></select></label>
     {current && <div className="notice">This page, current synthetic model / market v{current.sim_version}: {wins} profit / {losses} loss / {settled.length - wins - losses} flat. Repeated seeds are not independent trials. Historical runs are excluded.</div>}
     {error && <div className="notice negative" role="alert">{error}</div>}
     <section className="panel"><div className="panel-heading"><h2>Experiment archive</h2><span>{loading ? 'Loading…' : `${total ? offset + 1 : 0}–${Math.min(offset + runs.length, total)} of ${total}`}</span></div><div className="table-scroll"><table><thead><tr><th>Experiment</th><th>Market</th><th>Outcome</th><th>Status</th><th/></tr></thead><tbody>

@@ -35,7 +35,7 @@ export default function EquityChart({ points }: { points: CurvePoint[] }) {
       points.forEach((p, i) => { if (Math.abs(p.tick - tick) < Math.abs(points[nearest].tick - tick)) nearest = i; });
       setHover(nearest);
     }}>
-      <defs><linearGradient id="equity-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#B97375" stopOpacity=".18"/><stop offset="100%" stopColor="#B97375" stopOpacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="equity-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#557A95" stopOpacity=".18"/><stop offset="100%" stopColor="#557A95" stopOpacity="0"/></linearGradient></defs>
       {[0, 1, 2, 3, 4].map(i => {
         const v = high - i / 4 * (high - low), cy = 20 + i * 50;
         return <g key={i}><line x1="70" x2="875" y1={cy} y2={cy} className="gridline"/><text x="57" y={cy + 4} textAnchor="end">{returns ? `${v.toFixed(2)}%` : money(v)}</text></g>;
@@ -45,7 +45,7 @@ export default function EquityChart({ points }: { points: CurvePoint[] }) {
       <path d={path('hold')} className="hold-line"/>
       <path d={path('agent')} className="agent-line"/>
       {[0, 1, 2, 3, 4].map(i => <text key={i} x={70 + i / 4 * 805} y="246" textAnchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>T{Math.round(end * i / 4)}</text>)}
-      {hover != null && <g><line x1={x(active.tick)} x2={x(active.tick)} y1="20" y2="220" className="cursor-line"/><circle cx={x(active.tick)} cy={y(active.agent)} r="4" fill="#B97375" stroke="#F1E4E8" strokeWidth="2"/></g>}
+      {hover != null && <g><line x1={x(active.tick)} x2={x(active.tick)} y1="20" y2="220" className="cursor-line"/><circle cx={x(active.tick)} cy={y(active.agent)} r="4" fill="#557A95" stroke="#F3F7F9" strokeWidth="2"/></g>}
     </svg>
     <div className="chart-footnote"><span>Marked to market · Fees included</span><span>Simulation ticks</span></div>
   </div>;
