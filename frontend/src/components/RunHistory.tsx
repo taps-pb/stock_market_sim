@@ -16,13 +16,15 @@ export default function RunHistory() {
   const [selected, setSelected] = useState<AnySnapshot | null>(null);
   const [error, setError] = useState(''), [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0), [total, setTotal] = useState(0), [kind, setKind] = useState('');
+  const [scenario, setScenario] = useState(''), [status, setStatus] = useState('');
+  const [outcome, setOutcome] = useState<'' | 'profit' | 'loss'>('');
   useEffect(() => {
     let alive = true;
     setLoading(true); setError('');
-    getRuns(offset, kind).then(page => { if (alive) { setRuns(page.items); setTotal(page.total); } })
+    getRuns(offset, { kind, scenario, status, outcome: outcome || undefined }).then(page => { if (alive) { setRuns(page.items); setTotal(page.total); } })
       .catch(e => { if (alive) setError(e.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [offset, kind, terminalId]);
+  }, [offset, kind, scenario, status, outcome, terminalId]);
   async function open(id: string) { setError(''); try { setSelected(await getRun(id)); } catch (e) { setError((e as Error).message); } }
   function download() {
     if (!selected) return;
@@ -46,12 +48,18 @@ export default function RunHistory() {
   const wins = settled.filter(r => r.agent.net_pnl > 0).length, losses = settled.filter(r => r.agent.net_pnl < 0).length;
   return <div className="history-view">
     <div className="page-heading"><div><div className="eyebrow">Run history</div><h1>Saved experiments</h1><p>{total} saved runs. Synthetic trading and historical replay evidence are kept separate.</p></div><span className="version-tag">Local storage</span></div>
-    <div className="history-kind-filters" role="group" aria-label="Experiment type">
-      <button type="button" aria-pressed={kind === ''} onClick={() => { setKind(''); setOffset(0); }}>All</button>
-      <button type="button" aria-pressed={kind === 'synthetic'} onClick={() => { setKind('synthetic'); setOffset(0); }}>Synthetic</button>
-      <button type="button" aria-pressed={kind === 'historical'} onClick={() => { setKind('historical'); setOffset(0); }}>Historical</button>
+    <div className="history-controls">
+      <div className="history-kind-filters" role="group" aria-label="Experiment type">
+        <button type="button" aria-pressed={kind === ''} onClick={() => { setKind(''); setOffset(0); }}>All</button>
+        <button type="button" aria-pressed={kind === 'synthetic'} onClick={() => { setKind('synthetic'); setOffset(0); }}>Synthetic</button>
+        <button type="button" aria-pressed={kind === 'historical'} onClick={() => { setKind('historical'); setOffset(0); }}>Historical</button>
+      </div>
+      <div className="history-dropdowns">
+        <label><span>Market</span><select value={scenario} onChange={e => { setScenario(e.target.value); setOffset(0); }}><option value="">All markets</option><option value="balanced">Balanced</option><option value="volatile">Volatile</option><option value="retail">Retail crowd</option></select></label>
+        <label><span>Status</span><select value={status} onChange={e => { setStatus(e.target.value); setOffset(0); }}><option value="">All statuses</option><option value="completed">Completed</option><option value="interrupted">Interrupted</option><option value="failed">Failed</option></select></label>
+        <label><span>Outcome</span><select value={outcome} onChange={e => { setOutcome(e.target.value as typeof outcome); setOffset(0); }}><option value="">All outcomes</option><option value="profit">Profit</option><option value="loss">Loss</option></select></label>
+      </div>
     </div>
-    <label className="history-filter">Experiment type<select value={kind} onChange={e => { setKind(e.target.value); setOffset(0); }}><option value="">All experiments</option><option value="synthetic">Synthetic exchange</option><option value="historical">Historical replay</option></select></label>
     {current && <div className="notice">This page, current synthetic model / market v{current.sim_version}: {wins} profit / {losses} loss / {settled.length - wins - losses} flat. Repeated seeds are not independent trials. Historical runs are excluded.</div>}
     {error && <div className="notice negative" role="alert">{error}</div>}
     <section className="panel"><div className="panel-heading"><h2>Experiment archive</h2><span>{loading ? 'Loading…' : `${total ? offset + 1 : 0}–${Math.min(offset + runs.length, total)} of ${total}`}</span></div><div className="table-scroll"><table><thead><tr><th>Experiment</th><th>Market</th><th>Outcome</th><th>Status</th><th/></tr></thead><tbody>

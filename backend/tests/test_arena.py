@@ -116,6 +116,18 @@ def test_agent_orders_execute_next_tick_and_conserve_money():
     json.dumps(arena.result(), allow_nan=False)
 
 
+def test_actionable_decisions_exclude_wait_and_benchmark():
+    arena = Arena(Experiment(), None)
+    arena.decisions = [
+        {'tick': 1, 'trader': AI_ID, 'side': 'BUY', 'symbol': 'NOVA', 'qty': 4, 'filled': 0},
+        {'tick': 2, 'trader': AI_ID, 'side': 'WAIT', 'symbol': '—', 'qty': 0, 'filled': 0},
+        {'tick': 3, 'trader': HOLD_ID, 'side': 'BUY', 'symbol': 'HELX', 'qty': 2, 'filled': 2},
+        {'tick': 4, 'trader': AI_ID, 'side': 'SELL', 'symbol': 'NOVA', 'qty': 4, 'filled': 2},
+    ]
+    assert [(d['side'], d['filled']) for d in arena.actionable_decisions()] == [('SELL', 2), ('BUY', 0)]
+    assert arena.snapshot()['arena']['decisions'] == arena.actionable_decisions()
+
+
 def test_halt_cancels_planned_buys_and_persists_without_erasing_results(tmp_path):
     arena = Arena(Experiment(duration=100), PublicPredictor())
     for _ in range(65):

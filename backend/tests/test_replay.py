@@ -135,6 +135,7 @@ def test_paper_next_open_target_close_fees_and_stranded_inventory(frame, models,
 def test_archive_pagination_old_runs_finish_and_interrupt(tmp_path, frame, models):
     store = RunStore(tmp_path / 'runs.db')
     synthetic = Arena(Experiment(), None)
+    synthetic.status = 'completed'
     store.save(synthetic)
     arena = HistoricalArena(frame, 'c' * 64, 3, 100, *models)
     arena.step(); arena.finish()
@@ -161,6 +162,27 @@ def test_archive_pagination_old_runs_finish_and_interrupt(tmp_path, frame, model
     assert page1['total'] == 35 and len(page1['items']) == 30 and len(page2['items']) == 5
     assert {r['id'] for r in page1['items']}.isdisjoint(r['id'] for r in page2['items'])
     assert store.page(kind='synthetic')['total'] == 33
+    combined = store.page(kind='synthetic', scenario='balanced', status='completed')
+    assert combined['total'] == 33 and len(combined['items']) == 30
+    assert all(r['kind'] == 'synthetic' and r['settings']['scenario'] == 'balanced' and r['status'] == 'completed'
+               for r in combined['items'])
+    assert store.page(status='interrupted')['total'] == 1
+    assert store.page(kind='historical', scenario='balanced', status='completed')['total'] == 0
+
+
+def test_archive_outcome_filters(tmp_path):
+    store = RunStore(tmp_path / 'runs.db')
+    arena = Arena(Experiment(), None)
+    result = arena.result()
+    with sqlite3.connect(store.path) as db:
+        for run_id, net_pnl in [('profit', 10), ('loss', -5), ('flat', 0)]:
+            result['arena'].update(id=run_id, status='completed')
+            result['arena']['agent']['net_pnl'] = net_pnl
+            db.execute('INSERT INTO runs VALUES (?, ?, ?)', (run_id, arena.created_at, json.dumps(result)))
+    assert [r['id'] for r in store.page(outcome='profit')['items']] == ['profit']
+    assert [r['id'] for r in store.page(outcome='loss')['items']] == ['loss']
+    assert store.page(kind='historical', outcome='profit')['total'] == 0
+    assert store.page(scenario='balanced', status='completed', outcome='loss')['total'] == 1
 
 
 def test_forecast_metrics_against_hand_calculated_outcomes(frame, models):
@@ -201,7 +223,7 @@ def test_routes_controls_and_historical_exchange_guards(tmp_path, frame, models,
         await routes.control(routes.ControlIn(action='speed', speed=20))
         assert runtime.speed == 20
         for action in [routes.portfolio, lambda: routes.candles('SECRET'), lambda: routes.cancel_order(1),
-                       lambda: routes.place_order(routes.OrderIn(symbol='SECRET', side='BUY', qty=1))]:
+                       routes.decisions, lambda: routes.place_order(routes.OrderIn(symbol='SECRET', side='BUY', qty=1))]:
             with pytest.raises(HTTPException) as e:
                 await action()
             assert e.value.status_code == 409

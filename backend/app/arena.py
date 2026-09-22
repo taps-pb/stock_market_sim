@@ -178,6 +178,10 @@ class Arena:
                                    "reason": ("No funded, liquid entry or exit available" if self.settings.risk_profile == "super_risky"
                                               else "No executable opportunity exceeds the risk and cost limits")})
 
+    def actionable_decisions(self) -> list[dict]:
+        return [d for d in reversed(self.decisions)
+                if d.get("trader") == AI_ID and d.get("side") in {"BUY", "SELL"}]
+
     def account(self, tid: str) -> dict:
         portfolio = self.engine.portfolio(tid)
         value = self._equity(tid)
@@ -227,7 +231,7 @@ class Arena:
                           "elapsed": max(0, self.engine.tick - HISTORY), "warmup": HISTORY,
                           "verdict": verdict if self.terminal else "In progress",
                           "agent": agent, "benchmark": hold, "excess_pnl": round(agent["net_pnl"] - hold["net_pnl"], 2),
-                          "curve": curve, "decisions": self.decisions[-40:][::-1],
+                          "curve": curve, "decisions": self.actionable_decisions()[:40],
                           "fills": self.engine.executions[AI_ID][-50:][::-1], "population": self.population(),
                           "manual_interventions": len(self.engine.executions["USER"]),
                           "model_fingerprint": getattr(self.predictor, "fingerprint", None),
@@ -259,10 +263,23 @@ class RunStore:
     def list(self) -> list[dict]:
         return self.page()["items"]
 
-    def page(self, limit=30, offset=0, kind=None) -> dict:
+    def page(self, limit=30, offset=0, kind=None, scenario=None, status=None, outcome=None) -> dict:
         with sqlite3.connect(self.path) as db:
-            where = " WHERE COALESCE(json_extract(result, '$.arena.kind'), 'synthetic') = ?" if kind else ""
-            params = (kind,) if kind else ()
+            clauses, params = [], []
+            if kind:
+                clauses.append("COALESCE(json_extract(result, '$.arena.kind'), 'synthetic') = ?")
+                params.append(kind)
+            if scenario:
+                clauses.append("json_extract(result, '$.arena.settings.scenario') = ?")
+                params.append(scenario)
+            if status:
+                clauses.append("json_extract(result, '$.arena.status') = ?")
+                params.append(status)
+            operator = {"profit": ">", "loss": "<"}.get(outcome)
+            if operator:
+                clauses.append(f"json_extract(result, '$.arena.agent.net_pnl') {operator} ?")
+                params.append(0)
+            where = " WHERE " + " AND ".join(clauses) if clauses else ""
             total = db.execute("SELECT COUNT(*) FROM runs" + where, params).fetchone()[0]
             rows = db.execute("SELECT result FROM runs" + where + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                               (*params, limit, offset)).fetchall()

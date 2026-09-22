@@ -1,5 +1,5 @@
 export type Candle = { t: number; o: number; h: number; l: number; c: number; v: number };
-import type { Snapshot, AnySnapshot, RunItem, Dataset, Portfolio, ReplaySnapshot } from './store';
+import type { Snapshot, AnySnapshot, RunItem, Dataset, Portfolio, ReplaySnapshot, Decision } from './store';
 
 async function request<T>(path: string, body?: object): Promise<T> {
   const response = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined);
@@ -11,8 +11,17 @@ async function request<T>(path: string, body?: object): Promise<T> {
 }
 export const control = (action: string, speed?: number) => request<AnySnapshot>('/api/control', { action, speed: speed ?? 1 });
 export const startRun = (settings: object) => request<Snapshot>('/api/runs', settings);
-export const getRuns = (offset = 0, kind = '') => request<{items: RunItem[]; total: number}>(`/api/runs?limit=30&offset=${offset}${kind ? `&kind=${kind}` : ''}`);
+export type RunFilters = { kind?: string; scenario?: string; status?: string; outcome?: 'profit' | 'loss' };
+export const getRuns = (offset = 0, filters: RunFilters = {}) => {
+  const params = new URLSearchParams({ limit: '30', offset: String(offset) });
+  if (filters.kind) params.set('kind', filters.kind);
+  if (filters.scenario) params.set('scenario', filters.scenario);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.outcome) params.set('outcome', filters.outcome);
+  return request<{items: RunItem[]; total: number}>(`/api/runs?${params}`);
+};
 export const getRun = (id: string) => request<AnySnapshot>(`/api/runs/${id}`);
+export const getDecisions = () => request<Decision[]>('/api/decisions');
 export const getDatasets = () => request<Dataset[]>('/api/replay-datasets');
 export const startReplay = (settings: { dataset_id: string; seed: number; duration: number }) => request<ReplaySnapshot>('/api/replay-runs', settings);
 export async function importDataset(file: File): Promise<Dataset> {

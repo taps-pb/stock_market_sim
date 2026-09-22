@@ -143,8 +143,11 @@ async def control(body: ControlIn):
 
 @router.get("/api/runs")
 async def runs(limit: int = Query(30, ge=1, le=100), offset: int = Query(0, ge=0),
-               kind: Literal["synthetic", "historical"] | None = None):
-    return runtime.store.page(limit, offset, kind)
+               kind: Literal["synthetic", "historical"] | None = None,
+               scenario: Literal["balanced", "volatile", "retail"] | None = None,
+               status: Literal["completed", "interrupted", "failed"] | None = None,
+               outcome: Literal["profit", "loss"] | None = None):
+    return runtime.store.page(limit, offset, kind, scenario, status, outcome)
 
 
 @router.get("/api/runs/{run_id}")
@@ -153,6 +156,13 @@ async def run_result(run_id: str):
     if result is None:
         raise HTTPException(404, "experiment not found")
     return result
+
+
+@router.get("/api/decisions")
+async def decisions():
+    if isinstance(runtime.arena, HistoricalArena):
+        raise HTTPException(409, "The decision journal is unavailable during historical replay")
+    return runtime.arena.actionable_decisions()
 
 
 @router.get("/api/symbols/{symbol}/candles")

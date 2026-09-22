@@ -1517,12 +1517,174 @@ td{border-color:#E7EEF1!important}
   tr.empty-row td::before{display:none!important}
   .participants-row .participant-cell{display:block!important}
   .participants-row .participant-cell::before{display:none}
-  .participants-row td:not(.participant-cell){display:grid!important;grid-template-columns:112px minmax(0,1fr)}
-  .participants-row .flow-cell .flow-bar,.participants-row .flow-cell small,
-  .participants-row .fear-cell .fear-gauge,.participants-row .fear-cell small{grid-column:2}
+  .participants-view .population-panel{background:transparent;border:0;box-shadow:none;overflow:visible}
+  .participants-view .population-panel>.panel-heading{padding:0 0 14px}
+  .participants-view .population-panel>.panel-heading .quiet-label{display:none}
+  .participants-view .participants-table tr{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0 16px;padding:16px;margin-bottom:12px;
+  }
+  .participants-view .participants-row td{
+    display:block!important;min-width:0;padding:11px 0!important;border:0!important;
+  }
+  .participants-view .participants-row td::before{
+    display:block;margin-bottom:5px;padding:0;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;
+  }
+  .participants-view .participants-row .participant-cell::before{display:none}
+  .participants-view .participant-cell{grid-column:1/-1;padding:0 0 14px!important;border-bottom:1px solid var(--line)!important}
+  .participants-view .participant-name{align-items:flex-start;gap:12px}
+  .participants-view .participant-name>div{min-width:0}
+  .participants-view .participant-name strong{display:block;font-size:15px;line-height:1.3}
+  .participants-view .participant-name small{display:block;margin-top:4px;line-height:1.45}
+  .participants-view .participant-avatar{width:42px;height:42px;border-radius:11px;font-size:16px}
+  .participants-view .traders-cell,.participants-view .capital-cell{font-size:14px}
+  .participants-view .capital-cell small{display:block;margin-top:4px;line-height:1.35}
+  .participants-view .flow-cell{grid-column:1/-1;border-top:1px solid var(--line)!important}
+  .participants-view .flow-cell .flow-bar,.participants-view .fear-cell .fear-gauge{width:100%;height:7px;margin:8px 0}
+  .participants-view .flow-cell small,.participants-view .fear-cell small{display:block;line-height:1.35}
+  .participants-view .fear-cell,.participants-view .return-cell{border-top:1px solid var(--line)!important}
+  .participants-view .return-cell{text-align:left!important;font-size:14px}
   .run-cell{display:grid!important;grid-template-columns:80px minmax(0,1fr)}
   .run-cell>small{grid-column:2}
   .run-cell--inspect{display:block!important}
   .run-cell--inspect::before{display:none}
   .run-cell--inspect .text-button{width:100%;min-height:40px;border-radius:11px;background:var(--primary-soft);font-weight:700}
+}
+
+/* ===== RUN HISTORY FILTER TOOLBAR =====
+   Anticipated contract: .history-controls > [.history-kind-filters, .history-dropdowns].
+   Palette + chevron reused from cool light select language above. */
+
+.history-controls{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;margin:0 0 18px;min-width:0;
+}
+
+/* Tabs visible on desktop (override the earlier unconditional hide). */
+.history-controls .history-kind-filters{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;
+}
+.history-controls .history-kind-filters button{
+  min-height:40px;padding:0 16px;border:0;border-radius:999px;
+  background:var(--secondary-soft,#E8F2F7);color:var(--muted,#64747D);
+  font-size:12px;font-weight:600;letter-spacing:.2px;cursor:pointer;
+  transition:background-color .15s,color .15s,box-shadow .15s;
+}
+.history-controls .history-kind-filters button:hover{
+  background:#E3EDF2;color:var(--ink,#26343D);
+}
+.history-controls .history-kind-filters button:focus-visible{
+  outline:2px solid var(--accent,#557A95);outline-offset:2px;
+}
+.history-controls .history-kind-filters button[aria-pressed="true"],
+.history-controls .history-kind-filters button.active{
+  background:var(--accent,#557A95);color:#FFFFFF;
+  box-shadow:0 6px 16px rgba(85,122,149,.20);
+}
+
+/* Two soft blue dropdowns, right-aligned. */
+.history-dropdowns{
+  display:flex;align-items:flex-end;gap:10px;min-width:0;margin-left:auto;
+}
+.history-dropdowns label{
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+  color:var(--muted,#64747D);font-size:12px;font-weight:600;letter-spacing:.2px;
+}
+
+/* Match existing chevron + soft-blue select styling from .history-filter select. */
+.history-dropdowns select{
+  appearance:none;-webkit-appearance:none;
+  min-height:40px;min-width:150px;width:100%;
+  padding:0 40px 0 14px;
+  border:0;border-radius:12px;
+  background-color:#EEF4F6;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23557A95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  color:var(--ink,#26343D);font-size:12px;
+  box-shadow:inset 0 0 0 1px rgba(85,122,149,.18),0 5px 14px rgba(38,52,61,.05);
+  cursor:pointer;transition:background-color .15s,box-shadow .15s;
+}
+.history-dropdowns select:hover{background-color:#E3EDF2}
+.history-dropdowns select:focus-visible{
+  outline:2px solid var(--accent,#557A95);outline-offset:2px;
+  box-shadow:inset 0 0 0 2px var(--accent,#557A95),0 7px 18px rgba(85,122,149,.15);
+}
+.history-dropdowns select:disabled{cursor:not-allowed;opacity:.55}
+.history-dropdowns select option{background:#FFFFFF;color:var(--ink,#26343D)}
+
+/* Narrow: tabs above a two-column dropdown row. */
+@media (max-width:640px){
+  .history-controls{flex-direction:column;align-items:stretch;gap:12px;flex-wrap:nowrap}
+  .history-controls .history-kind-filters{flex-wrap:wrap;gap:8px}
+  .history-dropdowns{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    margin-left:0;width:100%;align-items:end;
+  }
+  .history-dropdowns select{min-width:0;width:100%}
+}
+
+/* Very narrow: single-column dropdowns. */
+@media (max-width:360px){
+  .history-dropdowns{grid-template-columns:1fr}
+}
+
+/* Decision journal */
+.decision-heading-meta{display:flex;align-items:center;gap:14px}
+.decision-count{color:var(--muted);font-size:12px;white-space:nowrap}
+.decision-count b{color:var(--ink);font-variant-numeric:tabular-nums}
+.decision-toolbar{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;padding:0 26px 18px;
+}
+.decision-action-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.decision-action-filters button{
+  min-height:40px;padding:0 15px;border:0;border-radius:999px;
+  background:var(--secondary-soft);color:var(--muted);
+  font-size:12px;font-weight:600;cursor:pointer;
+}
+.decision-action-filters button:hover{background:#E3EDF2;color:var(--ink)}
+.decision-action-filters button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.decision-action-filters button[aria-pressed="true"]{background:var(--accent);color:#FFFFFF;box-shadow:0 6px 16px rgba(85,122,149,.2)}
+.decision-dropdowns{display:flex;align-items:flex-end;gap:10px;margin-left:auto}
+.decision-dropdowns label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px;font-weight:600}
+.decision-dropdowns select{
+  appearance:none;-webkit-appearance:none;min-height:40px;min-width:150px;
+  padding:0 40px 0 14px;border:0;border-radius:12px;
+  background-color:#EEF4F6;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23557A95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  color:var(--ink);font-size:12px;box-shadow:inset 0 0 0 1px rgba(85,122,149,.18);
+  cursor:pointer;
+}
+.decision-dropdowns select:hover{background-color:#E3EDF2}
+.decision-dropdowns select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.decision-scroll{max-height:min(560px,60vh);overflow:auto;overscroll-behavior:contain}
+.decision-scroll thead th{position:sticky;top:0;z-index:2;background:#F8F4F5}
+
+@media (max-width:640px){
+  .decision-log .panel-heading{padding-bottom:12px;align-items:flex-start}
+  .decision-heading-meta{flex-direction:column;align-items:flex-end;gap:4px}
+  .decision-toolbar{flex-direction:column;align-items:stretch;gap:12px;padding:0 14px 14px}
+  .decision-action-filters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .decision-action-filters button{width:100%;padding:0 8px}
+  .decision-dropdowns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;width:100%}
+  .decision-dropdowns select{min-width:0;width:100%}
+  .decision-log .table-scroll.decision-scroll{
+    max-height:520px;overflow-y:auto!important;overflow-x:hidden!important;
+    padding:4px 12px 10px;background:#F3F7F9;
+    -webkit-overflow-scrolling:touch;
+  }
+  .decision-log .decision-scroll table,.decision-log .decision-scroll tbody{display:block;width:100%}
+  .decision-log .decision-scroll thead{display:none}
+  .decision-log .decision-scroll tr.data-row{display:block;margin:8px 0;padding:14px;width:100%}
+  .decision-log .decision-scroll tr.data-row td:not(.reason-cell){display:grid;grid-template-columns:80px minmax(0,1fr);gap:4px 12px}
+  .decision-log .decision-scroll tr.data-row td:not(.reason-cell)::before{grid-column:1;grid-row:1/span 2}
+  .decision-log .decision-scroll tr.data-row td:not(.reason-cell)>*{grid-column:2;justify-self:end;text-align:right}
+  .decision-log .decision-scroll td.reason-cell{display:block!important;line-height:1.5}
+  .decision-log .decision-scroll td.reason-cell::before{display:block;margin-bottom:5px;padding:0}
+  .decision-log .decision-scroll td:last-child span,.decision-log .decision-scroll td:last-child small{display:block}
+}
+
+@media (max-width:360px){
+  .decision-dropdowns{grid-template-columns:1fr}
 }

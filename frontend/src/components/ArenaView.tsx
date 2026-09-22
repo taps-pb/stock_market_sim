@@ -1,5 +1,8 @@
-import { useStore, type ArenaState } from '../store';
+import { useEffect, useMemo, useState } from 'react';
+import { useStore, type ArenaState, type Decision } from '../store';
 import { money, signedMoney, pct, compact, terminal } from '../format';
+import { getDecisions } from '../api';
+import { filterDecisions, mergeDecisions, executionOf, type ActionFilter, type ExecutionFilter } from '../decisionLog';
 import EquityChart from './EquityChart';
 import Chart from './Chart';
 import DepthLadder from './DepthLadder';
@@ -17,12 +20,38 @@ export function Performance({ arena }: { arena: ArenaState }) {
   </div>;
 }
 
-export function DecisionLog({ arena }: { arena: ArenaState }) {
-  const decisions = arena.decisions.filter(d => d.trader === 'ATLAS').slice(0, 12);
-  return <section className="panel decision-log"><div className="panel-heading"><div><h2>Decision journal</h2><p>Order rationale and executed fills.</p></div><span className="quiet-label">Atlas · live</span></div>
-    <div className="table-scroll"><table><thead><tr><th>Tick</th><th>Action</th><th>Market</th><th>Reason</th><th className="align-right">Execution</th></tr></thead><tbody>
-      {decisions.map((d, i) => <tr key={`${d.tick}-${d.symbol}-${i}`} className="data-row"><td data-label="Tick" className="mono dim">{d.tick}</td><td data-label="Action"><span className={`order-side ${d.side.toLowerCase()}`}>{d.side}</span></td><td data-label="Market" className="mono">{d.symbol}</td><td data-label="Reason" className="reason-cell">{d.reason}</td><td data-label="Execution" className="align-right mono">{d.side === 'WAIT' ? '—' : <><span className={d.filled ? '' : 'dim'}>{d.filled}/{d.qty} shares</span><small>{d.avg_price ? `@ ${money(d.avg_price, 2)}` : 'No matching fill'} · T{d.execution_tick}</small></>}</td></tr>)}
-      {!decisions.length && <tr className="data-row empty-row"><td colSpan={5}><div className="empty-inline">Atlas is collecting {arena.warmup} ticks of price and order-flow history before placing its first order.</div></td></tr>}
+export function DecisionLog({ arena, live = false }: { arena: ArenaState; live?: boolean }) {
+  const [history, setHistory] = useState<{ runId: string; rows: Decision[] } | null>(null);
+  const [action, setAction] = useState<ActionFilter>('ALL');
+  const [market, setMarket] = useState('');
+  const [execution, setExecution] = useState<ExecutionFilter>('ALL');
+  useEffect(() => {
+    setAction('ALL'); setMarket(''); setExecution('ALL');
+    if (!live) return;
+    let active = true;
+    getDecisions().then(rows => { if (active) setHistory({ runId: arena.id, rows }); }).catch(() => {});
+    return () => { active = false; };
+  }, [arena.id, live]);
+  const decisions = useMemo(() => mergeDecisions(
+    arena.decisions,
+    history?.runId === arena.id ? history.rows : [],
+  ), [arena.decisions, arena.id, history]);
+  const markets = useMemo(() => [...new Set(decisions.map(d => d.symbol))].sort(), [decisions]);
+  const visible = useMemo(() => filterDecisions(decisions, action, market, execution), [decisions, action, market, execution]);
+  return <section className="panel decision-log"><div className="panel-heading"><div><h2>Decision journal</h2><p>Atlas order attempts, rationale, and execution results.</p></div><div className="decision-heading-meta"><span className="quiet-label">Atlas · {live ? 'live' : 'archived'}</span><span className="decision-count"><b>{visible.length}</b> of {decisions.length}</span></div></div>
+    <div className="decision-toolbar">
+      <div className="decision-action-filters" role="group" aria-label="Filter by action">
+        {(['ALL', 'BUY', 'SELL'] as ActionFilter[]).map(value => <button key={value} type="button" aria-pressed={action === value} onClick={() => setAction(value)}>{value === 'ALL' ? 'All actions' : value === 'BUY' ? 'Buys' : 'Sells'}</button>)}
+      </div>
+      <div className="decision-dropdowns">
+        <label><span>Market</span><select value={market} onChange={e => setMarket(e.target.value)}><option value="">All stocks</option>{markets.map(symbol => <option key={symbol} value={symbol}>{symbol}</option>)}</select></label>
+        <label><span>Execution</span><select value={execution} onChange={e => setExecution(e.target.value as ExecutionFilter)}><option value="ALL">All results</option><option value="FILLED">Filled</option><option value="PARTIAL">Partial</option><option value="UNFILLED">Unfilled</option></select></label>
+      </div>
+    </div>
+    <div className="table-scroll decision-scroll"><table><thead><tr><th>Tick</th><th>Action</th><th>Market</th><th>Reason</th><th className="align-right">Execution</th></tr></thead><tbody>
+      {visible.map(d => <tr key={`${d.tick}-${d.execution_tick}-${d.symbol}-${d.side}`} className="data-row"><td data-label="Tick" className="mono dim">{d.tick}</td><td data-label="Action"><span className={`order-side ${d.side.toLowerCase()}`}>{d.side}</span></td><td data-label="Market" className="mono">{d.symbol}</td><td data-label="Reason" className="reason-cell">{d.reason}</td><td data-label="Execution" className="align-right mono"><span className={d.filled ? '' : 'dim'}>{d.filled}/{d.qty} shares</span><small>{executionOf(d).toLowerCase()} · {d.avg_price != null ? `@ ${money(d.avg_price, 2)}` : 'No fill'}{d.execution_tick != null ? ` · T${d.execution_tick}` : ''}</small></td></tr>)}
+      {!decisions.length && <tr className="data-row empty-row"><td colSpan={5}><div className="empty-inline">No Atlas orders attempted yet. Passive observation ticks are hidden.</div></td></tr>}
+      {!!decisions.length && !visible.length && <tr className="data-row empty-row"><td colSpan={5}><div className="empty-inline">No order attempts match these filters.</div></td></tr>}
     </tbody></table></div>
   </section>;
 }
@@ -66,7 +95,7 @@ export default function ArenaView({ onControl }: { onControl: (action: string) =
         {!snap.events.length && <div className="empty-inline">No news yet. Company reports and unexpected events will appear here.</div>}
       </section>
     </div>
-    <DecisionLog arena={arena}/>
+    <DecisionLog arena={arena} live/>
     <div className="workspace-note">{compact(a.initial)} of simulated capital · Public market inputs only · Fills, spreads and fees determine P&amp;L</div>
   </>;
 }
