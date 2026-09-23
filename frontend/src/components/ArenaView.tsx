@@ -7,7 +7,7 @@ import EquityChart from './EquityChart';
 import Chart from './Chart';
 import DepthLadder from './DepthLadder';
 import Signal from './Signal';
-import Watchlist from './Watchlist';
+import MarketForecastBoard from './MarketForecastBoard';
 
 export function Performance({ arena }: { arena: ArenaState }) {
   const a = arena.agent;
@@ -83,7 +83,7 @@ export default function ArenaView({ onControl }: { onControl: (action: string) =
       </section>
     </div>
     <div className="section-heading"><div><h2>Inside the market</h2><p>Fictional companies, independent traders, continuous price discovery.</p></div><span className="quiet-label">6 listed companies</span></div>
-    <Watchlist/>
+    <MarketForecastBoard/>
     <div className="market-grid"><Chart/><div className="market-side"><Signal/><DepthLadder/></div></div>
     <div className="lower-grid arena-lower">
       <section className="panel positions-panel"><div className="panel-heading"><div><h2>Agent positions</h2><p>Actual holdings in the shared exchange.</p></div><span className="pill">{a.positions.length} open</span></div><div className="table-scroll"><table><thead><tr><th>Market</th><th>Shares</th><th>Average</th><th>Mark</th><th className="align-right">Unrealized P&amp;L</th></tr></thead><tbody>

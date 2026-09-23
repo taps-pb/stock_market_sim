@@ -1688,3 +1688,56 @@ td{border-color:#E7EEF1!important}
 @media (max-width:360px){
   .decision-dropdowns{grid-template-columns:1fr}
 }
+
+/* Six-stock forecast board; live arena only. */
+.market-forecast-board{padding:22px 24px;margin-bottom:20px}
+.forecast-board-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.forecast-board-heading h2{font-size:18px;color:var(--ink)}
+.forecast-board-heading p{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.5}
+.forecast-board-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.forecast-card{
+  display:flex;flex-direction:column;gap:12px;min-width:0;min-height:44px;
+  padding:16px;text-align:left;color:var(--ink);background:#F8FBFD;
+  border:1px solid var(--line);border-radius:14px;
+  transition:background-color .15s,border-color .15s,box-shadow .15s;
+}
+.forecast-card:hover{background:#EDF5F9;border-color:var(--accent)}
+.forecast-card[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.forecast-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.forecast-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.forecast-card-head strong{font-size:15px;letter-spacing:.2px}
+.forecast-card-head span{color:var(--muted);font-size:12px;overflow-wrap:anywhere;text-align:right}
+.forecast-card-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+.forecast-card-prices>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.forecast-card-prices small,.forecast-card-return small,.forecast-card-details small{font-size:12px;color:var(--muted);font-weight:500}
+.forecast-card-prices b{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.forecast-card-return{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+.forecast-card-return small{margin-left:4px}
+.forecast-card-details{display:grid;gap:9px;width:100%;padding-top:12px;border-top:1px solid var(--line)}
+.forecast-card-details>span{display:flex;justify-content:space-between;gap:8px;min-width:0}
+.forecast-card-details b{font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.forecast-card-empty{margin-top:auto;color:var(--muted);font-size:12px}
+.forecast-board-grid>.empty-inline{grid-column:1/-1}
+
+@media (max-width:960px){
+  .forecast-board-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .market-forecast-board{padding:16px 12px;margin-bottom:16px}
+  .forecast-board-heading{margin-bottom:14px}
+  .forecast-board-heading h2{font-size:16px}
+  .forecast-board-grid{gap:8px}
+  .forecast-card{padding:12px;gap:10px}
+  .forecast-card-head{display:block}
+  .forecast-card-head span{display:block;text-align:left;margin-top:2px}
+  .forecast-card-prices{gap:4px}
+  .forecast-card-prices b{font-size:13px}
+  .forecast-card-return{font-size:14px}
+  .forecast-card-return small{display:block;margin:2px 0 0}
+  .forecast-card-details>span{display:block}
+  .forecast-card-details small,.forecast-card-details b{display:block;text-align:left}
+  .forecast-card-details b{margin-top:2px}
+}
+@media (max-width:360px){
+  .forecast-board-grid{grid-template-columns:minmax(0,1fr)}
+}
