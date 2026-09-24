@@ -13,6 +13,7 @@ from .replay import DatasetStore
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "ml" / "model.pkl"
+OUTLOOK_PATH = ROOT / "ml" / "outlook.pkl"
 store = RunStore(ROOT / "data" / "runs.sqlite3")
 datasets = DatasetStore(ROOT / "data" / "replay")
 starting = False
@@ -21,7 +22,7 @@ speed = 1
 
 def create_arena(settings: Experiment) -> Arena:
     try:
-        predictor = Predictor(str(MODEL_PATH))
+        predictor = Predictor(str(MODEL_PATH), str(OUTLOOK_PATH) if OUTLOOK_PATH.is_file() else None)
     except Exception:
         logging.getLogger(__name__).exception("Unable to load the trading model")
         predictor = None

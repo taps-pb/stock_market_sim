@@ -8,14 +8,15 @@ from pathlib import Path
 import joblib
 import numpy as np
 
-from app.config import SIM_VERSION
+from app.config import SEED_COMPANIES, SIM_VERSION
 from .features import HISTORY, OBSERVABLE_COLS, observable_row
 from .train import SCHEMA_VERSION, forecast
 
 
 class Predictor:
-    def __init__(self, path: str) -> None:
-        self.fingerprint = sha256(Path(path).read_bytes()).hexdigest()[:16]
+    def __init__(self, path: str, outlook_path: str | None = None) -> None:
+        primary_sha = sha256(Path(path).read_bytes()).hexdigest()
+        self.fingerprint = primary_sha[:16]
         self.artifact = joblib.load(path)
         d = self.artifact
         if (d.get("schema_version") != SCHEMA_VERSION or d.get("sim_version") != SIM_VERSION
@@ -25,6 +26,22 @@ class Predictor:
         self.model = d["model"]
         self.cols = d["cols"]
         self.horizon = d["horizon"]
+        self.outlook = None
+        if outlook_path is not None:
+            bundle = joblib.load(outlook_path)
+            prices = {s: float(p) for s, _, _, p, *_ in SEED_COMPANIES}
+            if (bundle.get("bundle_version") != 1 or bundle.get("schema_version") != SCHEMA_VERSION
+                    or bundle.get("sim_version") != SIM_VERSION or bundle.get("cols") != OBSERVABLE_COLS
+                    or bundle.get("base_sha256") != primary_sha or self.horizon != 20
+                    or bundle.get("base_prices") != prices or set(bundle.get("models", {})) != {60, 120}
+                    or set(bundle.get("index", {})) != {20, 60, 120}
+                    or any(bundle["models"][h].get("horizon") != h
+                           or bundle["models"][h].get("cols") != OBSERVABLE_COLS
+                           or bundle["models"][h].get("schema_version") != SCHEMA_VERSION
+                           or bundle["models"][h].get("sim_version") != SIM_VERSION for h in (60, 120))):
+                raise ValueError("incompatible outlook; retrain against the primary model")
+            self.outlook = bundle
+            self.fingerprint = sha256((primary_sha + sha256(Path(outlook_path).read_bytes()).hexdigest()).encode()).hexdigest()[:16]
         self.buf: dict[str, deque] = {}
         self.pending: deque = deque()
         self.hits = self.total = self.covered = 0
@@ -78,6 +95,7 @@ class Predictor:
 
         symbols = [s for s in engine.symbols if len(self.buf[s]) >= HISTORY]
         signals = {}
+        outlook_series = []
         if symbols:
             x = np.array([self._vector(engine, s) for s in symbols])
             probs = self.model.predict_proba(x)[:, 1]
@@ -91,6 +109,27 @@ class Predictor:
                               "target_tick": engine.tick + self.horizon}
                 self.pending.append((engine.tick + self.horizon, s, p >= 0.5,
                                      initial, predicted, lower, upper))
+            if self.outlook and len(symbols) == len(engine.symbols):
+                base = self.outlook["base_prices"]
+                now = 100 * sum(engine.last[s] / base[s] for s in symbols) / len(symbols)
+                for h in (20, 60, 120):
+                    ret, low, high = (returns, lows, highs) if h == 20 else forecast(self.outlook["models"][h], x)
+                    stocks = {}
+                    norm_pred = 0.0
+                    for i, s in enumerate(symbols):
+                        current = engine.last[s]
+                        predicted, lower, upper = (float(current * (1 + r[i])) for r in (ret, low, high))
+                        stocks[s] = {"price": round(predicted, 2), "lower": round(lower, 2),
+                                     "upper": round(upper, 2), "return_pct": round(float(ret[i] * 100), 3)}
+                        norm_pred += predicted / base[s]
+                    index = self.outlook["index"][h]
+                    level = 100 * norm_pred / len(symbols)
+                    outlook_series.append({"horizon": h, "target_tick": engine.tick + h,
+                                           "index_price": round(level, 4),
+                                           "index_lower": round(max(0.0, level - index["pad"]), 4),
+                                           "index_upper": round(level + index["pad"], 4),
+                                           "index_return_pct": round((level / now - 1) * 100, 4),
+                                           "stocks": stocks, "evaluation": index["evaluation"]})
         by_symbol = {}
         for s in engine.symbols:
             stats = self.by_symbol.get(s)
@@ -109,4 +148,10 @@ class Predictor:
             "n": self.total, "horizon": self.horizon,
             "review": {"by_symbol": by_symbol, "recent": list(self.recent)},
         }
+        if self.outlook is not None:
+            base = self.outlook["base_prices"]
+            if set(engine.symbols) != set(base):
+                raise ValueError("outlook index constituents differ from the live market")
+            self.last_output["outlook"] = {"index_now": round(100 * sum(engine.last[s] / base[s] for s in engine.symbols) / len(engine.symbols), 4),
+                                           "series": outlook_series}
         return self.last_output

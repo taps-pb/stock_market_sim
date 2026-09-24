@@ -1806,3 +1806,60 @@ td{border-color:#E7EEF1!important}
   .forecast-review-scroll td::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:500;text-align:left}
 }
 @media (max-width:360px){.forecast-review-stocks{grid-template-columns:minmax(0,1fr)}}
+
+/* Independent horizon checkpoints and the nontradable market index. */
+.market-outlook{min-width:0;padding:22px 24px;margin-bottom:20px}
+.outlook-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+.outlook-heading h2{font-size:18px;color:var(--ink)}
+.outlook-heading p,.outlook-heading>span,.outlook-note{font-size:12px;line-height:1.5;color:var(--muted)}
+.outlook-heading p{margin-top:5px}
+.outlook-index{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:15px 16px;margin-bottom:14px;background:var(--primary-soft);border-radius:12px}
+.outlook-index span{font-size:14px;color:var(--ink)}
+.outlook-index strong{font-size:24px;margin-left:10px;font-variant-numeric:tabular-nums}
+.outlook-index small{font-size:12px;color:var(--muted)}
+.outlook-checkpoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.outlook-card{min-width:0;padding:16px;background:#F8FBFD;border:1px solid var(--line);border-radius:12px}
+.outlook-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.outlook-card-head strong{font-size:15px}
+.outlook-card-head span,.outlook-card-value small{font-size:12px;color:var(--muted)}
+.outlook-card-value{font-size:25px;font-weight:600;margin:9px 0 3px;font-variant-numeric:tabular-nums}
+.outlook-card>.up,.outlook-card>.down{font-size:12px}
+.outlook-card-meta{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);display:grid;gap:7px}
+.outlook-card-meta>span{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.outlook-card-meta b{font-size:12px;color:var(--ink);text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.outlook-trajectory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.outlook-trajectory{min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px}
+.outlook-trajectory h3{font-size:16px;margin:0 0 12px}
+.outlook-trajectory p{font-size:12px;color:var(--muted);margin:0 0 8px}
+.outlook-trajectory p strong{font-size:14px;color:var(--ink)}
+.outlook-stock-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.outlook-stock-heading select{font-family:inherit;font-size:12px;font-weight:500;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0;max-width:60%;min-height:44px;padding:8px}
+.outlook-stock-heading select:focus-visible,.outlook-chart-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.outlook-chart-scroll{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.outlook-chart-scroll::-webkit-scrollbar{display:none}
+.outlook-chart{display:block;width:100%;min-width:580px;height:auto}
+.outlook-chart text{fill:var(--muted);font-size:16px;font-family:'DM Sans',Arial,sans-serif}
+.outlook-gridline{stroke:var(--line);stroke-dasharray:3 4}
+.outlook-guide{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:5 5;stroke-linejoin:round}
+.outlook-range{stroke:var(--secondary);stroke-width:7;stroke-linecap:round}
+.outlook-dot{fill:var(--accent)}
+.outlook-stock-checkpoints{display:grid;gap:8px;margin-top:12px}
+.outlook-stock-checkpoints>div{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px}
+.outlook-stock-checkpoints b{font-size:12px}
+.outlook-stock-checkpoints small{font-size:12px;color:var(--muted);width:100%}
+.outlook-stock-checkpoints .up,.outlook-stock-checkpoints .down{font-size:12px;margin-left:6px}
+.outlook-note{margin:16px 0 0}
+.outlook-empty{font-size:12px;color:var(--muted);padding:22px 0}
+@media (max-width:960px){.outlook-checkpoints{grid-template-columns:repeat(2,minmax(0,1fr))}.outlook-trajectory-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){
+  .market-outlook{padding:16px 12px;margin-bottom:16px}
+  .outlook-heading{display:block}
+  .outlook-heading h2{font-size:16px}
+  .outlook-heading>span{display:block;margin-top:6px}
+  .outlook-index{display:block;padding:12px}
+  .outlook-index small{display:block;margin-top:4px}
+  .outlook-checkpoints{grid-template-columns:minmax(0,1fr);gap:8px}
+  .outlook-card{padding:12px}
+  .outlook-trajectory{padding:12px}
+  .outlook-card-value{font-size:20px}
+}

@@ -45,7 +45,8 @@ The exchange runs without an open browser.
 
 An experiment trades for 1,500 ticks by default, after warmup. The clock targets
 four ticks per second at 1×; speed depends on the machine. Ticks are simulation
-steps, not calendar days, so returns are not annualized.
+exchange steps, not calendar days or market hours. The 250 ms target is wall-clock
+playback speed, not a financial-time mapping; returns are not annualized.
 
 ## How Atlas trades
 
@@ -59,6 +60,14 @@ The model estimates the price 20 ticks ahead, a nominal 80% interval, and the
 probability of a higher close. Every five ticks, Atlas considers buys when the
 estimated up probability clears 62% and the forecast clears the current ask,
 estimated fees, slippage allowance, and a further 20-basis-point edge.
+
+The market outlook separately trains 60- and 120-tick stock forecasts. Atlas
+still trades using only its 20-tick model. An equal-weight, normalized price
+index starts at 100 from the six initial stock prices; it is **not tradable**.
+Its forecast aggregates the stock models' price estimates. Its 80% interval is
+calibrated from index forecast errors on calibration markets and measured on
+unseen markets. Checkpoints are independent forecasts, not intermediate prices
+along a predicted path; ticks do not translate to one or two market hours.
 
 Default entry limits are 20% of equity per position, 60% total exposure, and
 25% of displayed ask depth within the order's price limit. Atlas cannot borrow
@@ -260,6 +269,8 @@ From `backend/`, with the virtual environment active:
 ```bash
 python -m ml.record --seeds 8 --ticks 3000 --horizon 20 --out ml/data/dataset-v4.csv
 OMP_NUM_THREADS=1 python -m ml.train --data ml/data/dataset-v4.csv --save ml/model.pkl
+OMP_NUM_THREADS=1 python -m ml.outlook --data ml/data/dataset-v4.csv \
+  --base ml/model.pkl --save ml/outlook.pkl --report ml/outlook-report.md
 ```
 
 The included artifact uses seeds 1–5 for training, seed 6 for interval
@@ -269,6 +280,15 @@ price MAE is $0.868 versus $0.989 for unchanged price; direction accuracy is
 from the funded trading experiments. See [the model report](backend/ml/report.md).
 Up probabilities are raw classifier estimates, not probabilities of profit. They are
 close to calibrated on seed 6 (Brier 0.198); Platt and isotonic calibration did not improve them.
+
+The included outlook artifact fits separate 60- and 120-tick models on seeds
+1–5, calibrates stock and index intervals on seed 6, and evaluates both on
+untouched seeds 7–8. Index error is measured in **index points**, not dollars.
+At 120 ticks, its index MAE is 1.777 versus 1.744 for the unchanged-index
+baseline; this horizon does **not** beat that baseline. See
+[the outlook report](backend/ml/outlook-report.md) for all horizons and coverage.
+`backend/ml/data/dataset.csv` is an older simulator dataset; generate or use
+`dataset-v4.csv` for outlook training.
 
 Restart after replacing the model. Regenerate data and retrain after changing
 market dynamics. Incompatible artifacts fail visibly; an experiment cannot

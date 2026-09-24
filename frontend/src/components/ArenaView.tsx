@@ -9,6 +9,7 @@ import DepthLadder from './DepthLadder';
 import Signal from './Signal';
 import MarketForecastBoard from './MarketForecastBoard';
 import ForecastReview from './ForecastReview';
+import MarketOutlook from './MarketOutlook';
 
 export function Performance({ arena }: { arena: ArenaState }) {
   const a = arena.agent;
@@ -85,6 +86,7 @@ export default function ArenaView({ onControl }: { onControl: (action: string) =
     </div>
     <div className="section-heading"><div><h2>Inside the market</h2><p>Fictional companies, independent traders, continuous price discovery.</p></div><span className="quiet-label">6 listed companies</span></div>
     <MarketForecastBoard/>
+    <MarketOutlook model={snap.model} symbols={snap.symbols}/>
     <ForecastReview model={snap.model} symbols={snap.symbols}/>
     <div className="market-grid"><Chart/><div className="market-side"><Signal/><DepthLadder/></div></div>
     <div className="lower-grid arena-lower">

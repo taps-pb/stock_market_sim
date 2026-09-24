@@ -19,6 +19,13 @@ export type ForecastReviewData = {
     predicted_price: number; lower: number; upper: number; actual_price: number;
     abs_error: number; covered: boolean }[];
 };
+export type OutlookCheckpoint = {
+  horizon: number; target_tick: number; index_price: number; index_lower: number;
+  index_upper: number; index_return_pct: number;
+  stocks: Record<string, { price: number; lower: number; upper: number; return_pct: number }>;
+  evaluation: { mae: number; baseline_mae: number; coverage: number; n: number };
+};
+export type ModelOutlook = { index_now: number; series: OutlookCheckpoint[] };
 export type Model = {
   signals: Record<string, Signal>;
   accuracy: number | null;
@@ -29,6 +36,7 @@ export type Model = {
   coverage: number | null;
   interval_coverage: number;
   review?: ForecastReviewData;
+  outlook?: ModelOutlook;
   evaluation: { mae: number; baseline_mae: number; coverage: number; direction_accuracy: number };
 };
 export type Snapshot = {
