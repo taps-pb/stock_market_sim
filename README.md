@@ -1,14 +1,19 @@
 # Market Lab · Agent Trading Arena
 
+**Status: complete as a local, synthetic-market simulation and research app.**
+It is not a real-market forecasting or brokerage product.
+
 Fund an AI agent, turn on a simulated exchange, and measure what it actually
 earns. Atlas trades six fictional stocks against 218 autonomous participants:
 panic sellers, FOMO buyers, value investors, momentum traders, institutions,
 whales, pensions, and market makers. Prices emerge from their matched orders.
 
-The rebuilt workspace includes a live capital curve, an equally funded
-buy-and-hold account, price forecasts, market depth, participant behavior,
-an execution journal, a manual trading desk, and a persistent experiment archive.
-All funds, companies, and results are simulated.
+The workspace includes a live capital curve, an equally funded buy-and-hold
+account, a six-stock forecast board, forecast-versus-reality scoring, independent
+20/60/120-tick outlooks, and an evaluated six-stock index. Market depth,
+participant behavior, an execution journal, a manual trading desk, and a
+persistent experiment archive make trading results inspectable. All funds,
+companies, and results are simulated.
 
 ## Start the platform
 
@@ -30,18 +35,24 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. A trained model is included. The default
-experiment funds Atlas and buy-and-hold with **$100,000 each**, using seed 42.
+Open **http://localhost:5173**. Trained models are included; retraining is
+optional. The default experiment funds Atlas and buy-and-hold with **$100,000
+each**, using seed 42.
 The exchange runs without an open browser.
 
 1. Watch the first 60 ticks build observable market history.
 2. Inspect live equity, net profit after fees, drawdown, and performance against
    buy-and-hold. Switch the capital chart between dollars and percentage returns.
-3. Explore individual stocks, forecasts, order books, and trader categories.
-4. Use 1×, 5×, or 20× speed. Pause freezes the exchange; stopping Atlas closes
+3. Compare current and predicted prices for all six stocks on the market
+   forecast board. Select one to inspect its chart and 20-tick forecast.
+4. Check forecast versus reality after target ticks arrive: predicted versus
+   actual prices, per-stock error, unchanged-price baseline, and interval hits.
+   Inspect independent 20/60/120-tick stock and index outlook checkpoints.
+5. Use 1×, 5×, or 20× speed. Pause freezes the exchange; stopping Atlas closes
    its positions and prevents new buys while the other participants continue.
-5. Finish the run, inspect its saved result, or export its JSON. **New experiment**
-   lets you choose capital, seed, duration, market environment, and risk profile.
+6. Finish the run, inspect its saved forecast review and outlook, or export its
+   JSON. **New experiment** lets you choose capital, seed, duration, market
+   environment, and risk profile. Older archives remain readable.
 
 An experiment trades for 1,500 ticks by default, after warmup. The clock targets
 four ticks per second at 1×; speed depends on the machine. Ticks are simulation
@@ -306,9 +317,9 @@ account. Included training data, model artifacts, and evaluation reports come fr
 fictional simulated markets. Imported historical CSVs and experiment archives stay
 under ignored `backend/data/`; review exported run JSON before sharing it.
 
-The included `model.pkl` is a Python pickle. Load only the artifact shipped with a
-trusted checkout, or one you trained yourself. Never replace it with an untrusted
-pickle.
+The included `model.pkl` and `outlook.pkl` are Python pickles. Load only
+artifacts shipped with a trusted checkout, or ones you trained yourself. Never
+replace them with untrusted pickles.
 
 ## Verification and code map
 
@@ -327,8 +338,9 @@ npm run build
 
 Checks cover the matching engine, trader behavior, resource reservations,
 conservation, causal features/labels, evaluation splits, forecast maturity,
-next-tick agent execution, risk stops, illiquid settlement, deterministic
-funded runs, durable archives, and WebSocket cleanup.
+long-horizon labels, index calibration and unseen-market scoring, next-tick
+agent execution, risk stops, illiquid settlement, deterministic funded runs,
+durable archives, and WebSocket cleanup.
 
 - `backend/app/engine/`: exchange, company dynamics, and autonomous traders.
 - `backend/app/agent.py`: policy using public observations and its own account.
