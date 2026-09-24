@@ -13,6 +13,12 @@ export type Signal = {
   dir: "up" | "down"; prob: number; price: number; lower: number; upper: number;
   return_pct: number; target_tick: number;
 };
+export type ForecastReviewData = {
+  by_symbol: Record<string, { n: number; mae: number | null; baseline_mae: number | null; coverage: number | null }>;
+  recent: { symbol: string; issued_tick: number; target_tick: number; starting_price: number;
+    predicted_price: number; lower: number; upper: number; actual_price: number;
+    abs_error: number; covered: boolean }[];
+};
 export type Model = {
   signals: Record<string, Signal>;
   accuracy: number | null;
@@ -22,6 +28,7 @@ export type Model = {
   baseline_mae: number | null;
   coverage: number | null;
   interval_coverage: number;
+  review?: ForecastReviewData;
   evaluation: { mae: number; baseline_mae: number; coverage: number; direction_accuracy: number };
 };
 export type Snapshot = {

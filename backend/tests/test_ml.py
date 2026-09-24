@@ -1,5 +1,6 @@
 """Causal targets, disjoint evaluation, execution costs, and live horizon scoring."""
 import copy
+import json
 import joblib
 import numpy as np
 import pandas as pd
@@ -68,6 +69,9 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
         state = predictor.step(engine)
     assert len(state["signals"]) == len(engine.symbols)
     assert state["horizon"] == 7 and state["n"] == 0
+    assert state["review"]["recent"] == []
+    assert all(row["n"] == 0 and row["mae"] is None
+               for row in state["review"]["by_symbol"].values())
     first_prices = dict(engine.last)
     first_signals = state["signals"]
     hidden_changed = copy.deepcopy(engine)
@@ -82,13 +86,32 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     for s in engine.symbols:
         row = replay[replay.symbol == s].iloc[0]
         np.testing.assert_allclose(predictor._vector(engine, s), row[OBSERVABLE_COLS].to_numpy(dtype=float))
-    for _ in range(7):
+    for _ in range(6):
         engine.step()
         state = predictor.step(engine)
+    assert state["review"]["recent"] == []  # actual prices withheld until target tick
+    engine.step()
+    state = predictor.step(engine)
     assert state["n"] == len(engine.symbols)
     expected_baseline = np.mean([abs(engine.last[s] - first_prices[s]) for s in engine.symbols])
     assert state["baseline_mae"] == pytest.approx(expected_baseline)
     assert predictor.step(engine) == state  # duplicate callback must not score twice
+    assert len(state["review"]["recent"]) == len(engine.symbols)
+    for call in state["review"]["recent"]:
+        symbol = call["symbol"]
+        assert call["issued_tick"] == HISTORY and call["target_tick"] == engine.tick
+        assert call["starting_price"] == first_prices[symbol]
+        assert call["actual_price"] == engine.last[symbol]
+        assert call["abs_error"] == pytest.approx(abs(call["predicted_price"] - engine.last[symbol]))
+        assert call["covered"] == (call["lower"] <= engine.last[symbol] <= call["upper"])
+        assert state["review"]["by_symbol"][symbol]["mae"] == pytest.approx(call["abs_error"])
+    for _ in range(22):
+        engine.step()
+        state = predictor.step(engine)
+    assert len(state["review"]["recent"]) == 120
+    assert state["review"]["recent"][0]["target_tick"] == engine.tick
+    assert all(row["n"] == 23 for row in state["review"]["by_symbol"].values())
+    json.dumps(state["review"], allow_nan=False)  # persisted snapshots and WebSocket payloads
     for sig in first_signals.values():
         assert 0 < sig["lower"] <= sig["price"] <= sig["upper"]
         assert sig["target_tick"] == HISTORY + 7
@@ -96,6 +119,9 @@ def test_training_and_live_scoring_use_saved_horizon(tmp_path):
     engine.step()  # a missing tick invalidates features and exact-horizon calls
     reset = predictor.step(engine)
     assert reset["n"] == 0 and not reset["signals"]
+    assert reset["review"]["recent"] == []
+    assert all(row["n"] == 0 and row["coverage"] is None
+               for row in reset["review"]["by_symbol"].values())
     artifact["sim_version"] = -1
     joblib.dump(artifact, path)
     with pytest.raises(ValueError, match="incompatible"):

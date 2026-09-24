@@ -7,3 +7,10 @@ node_modules/
 frontend/dist/
 backend/data/
 backend/ml/data/dataset-v*.csv
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+.claude/settings.local.json

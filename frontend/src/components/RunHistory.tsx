@@ -5,6 +5,7 @@ import { money, pct, signedMoney } from '../format';
 import { Performance, DecisionLog } from './ArenaView';
 import EquityChart from './EquityChart';
 import ReplayView from './ReplayView';
+import ForecastReview from './ForecastReview';
 
 export default function RunHistory() {
   const current = useStore(s => s.snap?.arena);
@@ -39,6 +40,7 @@ export default function RunHistory() {
     return <>{controls}
       <div className="page-heading"><div><div className="eyebrow">Archived experiment · Seed {a.settings.seed}</div><h1>{a.verdict}</h1><p>{a.settings.scenario} market · {a.elapsed.toLocaleString()} trading ticks · {new Date(a.created_at).toLocaleString()}</p></div></div>
       <Performance arena={a}/><section className="panel"><EquityChart points={a.curve}/></section>
+      {selected.model?.review && <ForecastReview model={selected.model} symbols={selected.symbols}/>}
       <div className="notice">{a.agent.positions.length ? 'Open inventory remains. Equity includes unrealized P&L and may not be executable.' : `All agent positions closed. Final cash: ${money(a.agent.cash, 2)}.`} Status: {a.status}. Orders used the live matching engine. {a.benchmark.positions.length > 0 && 'Benchmark inventory remains; its P&L includes unrealized value.'}</div>
       <DecisionLog arena={{ ...a, decisions: a.decisions.slice().reverse() }}/>
     </>;

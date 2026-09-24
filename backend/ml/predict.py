@@ -31,6 +31,8 @@ class Predictor:
         self.error = self.baseline_error = 0.0
         self.last_tick: int | None = None
         self.last_output: dict = {}
+        self.by_symbol: dict[str, dict] = {}
+        self.recent: deque = deque(maxlen=120)
 
     def _vector(self, engine, s: str) -> list[float]:
         row = observable_row(np.array(self.buf[s], dtype=float),
@@ -47,6 +49,8 @@ class Predictor:
             self.pending.clear()
             self.hits = self.total = self.covered = 0
             self.error = self.baseline_error = 0.0
+            self.by_symbol.clear()
+            self.recent.clear()
         self.last_tick = engine.tick
         for s in engine.symbols:
             self.buf.setdefault(s, deque(maxlen=HISTORY)).append(engine.last[s])
@@ -55,11 +59,22 @@ class Predictor:
             if tick != engine.tick:
                 continue
             actual = engine.last[s]
+            err = abs(actual - predicted)
+            baseline_err = abs(actual - initial)
+            hit = int(lower <= actual <= upper)
             self.hits += int((actual > initial) == up)
-            self.covered += int(lower <= actual <= upper)
-            self.error += abs(actual - predicted)
-            self.baseline_error += abs(actual - initial)
+            self.covered += hit
+            self.error += err
+            self.baseline_error += baseline_err
             self.total += 1
+            stats = self.by_symbol.setdefault(s, {"n": 0, "error": 0.0, "baseline_error": 0.0, "covered": 0})
+            stats["n"] += 1
+            stats["error"] += err
+            stats["baseline_error"] += baseline_err
+            stats["covered"] += hit
+            self.recent.appendleft({"symbol": s, "issued_tick": tick - self.horizon, "target_tick": tick,
+                                    "starting_price": initial, "predicted_price": predicted, "lower": lower,
+                                    "upper": upper, "actual_price": actual, "abs_error": err, "covered": bool(hit)})
 
         symbols = [s for s in engine.symbols if len(self.buf[s]) >= HISTORY]
         signals = {}
@@ -76,6 +91,14 @@ class Predictor:
                               "target_tick": engine.tick + self.horizon}
                 self.pending.append((engine.tick + self.horizon, s, p >= 0.5,
                                      initial, predicted, lower, upper))
+        by_symbol = {}
+        for s in engine.symbols:
+            stats = self.by_symbol.get(s)
+            n = stats["n"] if stats else 0
+            by_symbol[s] = {"n": n,
+                            "mae": stats["error"] / n if n else None,
+                            "baseline_mae": stats["baseline_error"] / n if n else None,
+                            "coverage": stats["covered"] / n if n else None}
         self.last_output = {
             "signals": signals, "accuracy": self.hits / self.total if self.total else None,
             "mae": self.error / self.total if self.total else None,
@@ -84,5 +107,6 @@ class Predictor:
             "interval_coverage": self.artifact["interval_coverage"],
             "evaluation": self.artifact["evaluation"],
             "n": self.total, "horizon": self.horizon,
+            "review": {"by_symbol": by_symbol, "recent": list(self.recent)},
         }
         return self.last_output
