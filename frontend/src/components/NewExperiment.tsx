@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useStore, type Dataset } from '../store';
 import { startRun, startReplay, getDatasets, importDataset } from '../api';
-import { terminal } from '../format';
+import { money, terminal } from '../format';
+
+const riskChoices = [
+  { key: 'cautious', name: 'Cautious', summary: 'Smaller positions. Up to 10% per company and 30% invested; Atlas stops trading after a 4% account drop.' },
+  { key: 'balanced', name: 'Balanced', summary: 'A middle setting. Up to 20% per company and 60% invested; Atlas stops trading after an 8% account drop.' },
+  { key: 'assertive', name: 'Assertive', summary: 'Atlas can invest more. Up to 30% per company and 90% invested; Atlas stops trading after a 12% account drop.' },
+  { key: 'super_risky', name: 'Super risky', summary: 'High risk: Atlas trades more often and has no automatic account loss halt. Losses, slippage, and fees can add up quickly.' },
+] as const;
 
 export default function NewExperiment({ open, close, finish, basic = false }: { open: boolean; close: () => void; finish: () => void; basic?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -9,6 +16,7 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
   const replay = useStore(s => s.replay);
   const setSnap = useStore(s => s.setSnap);
   const [capital, setCapital] = useState(100000), [seed, setSeed] = useState(101), [duration, setDuration] = useState(1500);
+  const [basicCapital, setBasicCapital] = useState('100000');
   const [scenario, setScenario] = useState('balanced'), [risk, setRisk] = useState('balanced');
   const [basicScenario, setBasicScenario] = useState('balanced');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
@@ -24,13 +32,15 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
     finally { setBusy(false); }
   }
   async function submit(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
+    event.preventDefault();
+    if (basic && !basicCapitalValid) return;
+    setBusy(true); setError('');
     const profile = risk === 'cautious' ? { max_position: .10, max_exposure: .30, max_drawdown: .04 }
       : risk === 'assertive' ? { max_position: .30, max_exposure: .90, max_drawdown: .12 }
       : risk === 'super_risky' ? { max_position: .30, max_exposure: .90, max_drawdown: .30,
           stop_loss: .15, min_probability: .50, min_edge_bps: 0, slippage_bps: 100, participation: .50 }
       : { max_position: .20, max_exposure: .60, max_drawdown: .08 };
-    try { setSnap(basic ? await startRun({ capital: 100000, seed: Date.now() >>> 0, duration: 1500, scenario: basicScenario, risk_profile: 'balanced', max_position: .20, max_exposure: .60, max_drawdown: .08 })
+    try { setSnap(basic ? await startRun({ capital: Number(basicCapital), seed: Date.now() >>> 0, duration: 1500, scenario: basicScenario, risk_profile: risk, ...profile })
       : mode === 'historical' ? await startReplay({ dataset_id: dataset, seed, duration: sessions })
       : await startRun({ capital, seed, duration, scenario, risk_profile: risk, ...profile })); close(); }
     catch (e) { setError((e as Error).message); }
@@ -38,12 +48,22 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
   }
   const current = replay?.arena ?? arena;
   const running = current && !terminal(current.status);
+  const amount = Number(basicCapital);
+  const basicCapitalValid = basicCapital !== '' && Number.isFinite(amount) && amount >= 1000 && amount <= 1000000 && amount % 1000 === 0;
+  const riskIndex = Math.max(0, riskChoices.findIndex(choice => choice.key === risk));
+  const selectedRisk = riskChoices[riskIndex];
   return <dialog ref={dialog} className={`experiment-dialog ${basic ? 'basic-dialog' : ''}`} onCancel={close} onClick={event => { if (event.target === dialog.current) close(); }}><form onSubmit={submit}>
     <div className="dialog-heading"><div className="eyebrow">New experiment</div><button type="button" className="icon-button" onClick={close} aria-label="Close experiment setup">×</button></div>
     <h1>{basic ? 'Start a new simulation' : 'Start an experiment'}</h1>
-    {basic ? <><p className="experiment-intro">Atlas and a simple comparison each start with $100,000 in simulated money. This is not real trading.</p>
+    {basic ? <><p className="experiment-intro">Atlas and a simple comparison each start with <strong className="basic-intro-amount">{basicCapitalValid ? money(amount) : 'your chosen amount'}</strong> in simulated money. This is not real trading.</p>
+      <div className="basic-capital-field"><label htmlFor="basic-capital">Starting money · USD</label><div className="basic-money-field"><span aria-hidden="true">$</span><input id="basic-capital" type="number" inputMode="numeric" min="1000" max="1000000" step="1000" required value={basicCapital} aria-invalid={!basicCapitalValid} aria-describedby="basic-capital-hint" disabled={busy} onChange={e => setBasicCapital(e.target.value)}/></div><p className="hint" id="basic-capital-hint">{basicCapitalValid ? 'Choose $1,000 to $1,000,000 in steps of $1,000.' : 'Enter $1,000–$1,000,000 in steps of $1,000.'}</p></div>
       <label>Market style<select value={basicScenario} onChange={e => setBasicScenario(e.target.value)} disabled={busy}><option value="balanced">Balanced · a little of everything</option><option value="volatile">Volatile · bigger price moves</option><option value="retail">Retail crowd · more individual traders</option></select></label>
-      <p className="form-note">The run uses standard settings. Switch to Pro to adjust money, duration, and risk.</p>
+      <div className="basic-risk"><div className="basic-risk-heading"><label htmlFor="basic-risk">Risk level</label><output className="basic-risk-name" htmlFor="basic-risk">{selectedRisk.name}</output></div>
+        <input className="basic-risk-range" id="basic-risk" type="range" min="0" max="3" step="1" value={riskIndex} aria-valuetext={selectedRisk.name} aria-describedby="basic-risk-explain" disabled={busy} onChange={e => setRisk(riskChoices[Number(e.target.value)].key)}/>
+        <div className="basic-risk-stops" role="group" aria-label="Choose risk level">{riskChoices.map((choice, index) => <button key={choice.key} type="button" aria-pressed={index === riskIndex} disabled={busy} onClick={() => setRisk(choice.key)}>{choice.name}</button>)}</div>
+        <p id="basic-risk-explain" className={`basic-risk-explain${risk === 'super_risky' ? ' high' : ''}`} aria-live="polite">{selectedRisk.summary}</p>
+      </div>
+      <p className="form-note">Standard run length. Switch to Pro to adjust duration and seed.</p>
     </> : <>
     <label>Experiment type<select value={mode} onChange={e => setMode(e.target.value)} disabled={busy}><option value="synthetic">Synthetic exchange</option><option value="historical">Blind historical replay</option></select></label>
     {mode === 'historical' ? <>
@@ -81,7 +101,7 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
     </>}
     {running && <div className="notice">The current experiment is still {current.status}. <button className="text-button" type="button" onClick={finish}>Finish it first</button></div>}
     {error && <div role="alert" className="notice negative">{error}</div>}
-    <button className="button primary full-width" type="submit" disabled={busy || !!running || (!basic && mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : basic ? 'Start simulation' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
+    <button className="button primary full-width" type="submit" disabled={busy || !!running || (basic && !basicCapitalValid) || (!basic && mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : basic ? 'Start simulation' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
     <div className="dialog-footer">Simulated capital only · No broker connection</div>
   </form></dialog>;
 }

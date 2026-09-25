@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Market Lab · New simulation preview</title>
+  <style>
+    :root {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color-scheme: light;
+      --canvas:#f3f7f9; --surface:#fcfdfd; --soft:#f3f7f9; --line:#d4e1e7;
+      --ink:#26343d; --muted:#617480; --accent:#557a95; --accent-ink:#fff;
+      --rail:#c8dae4; --green:#3e7c61; --danger:#a9525e; --danger-soft:#f8ecee;
+    }
+    *,*::before,*::after { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:var(--canvas); color:var(--ink); font-size:14px; line-height:1.5; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    :is(button,input,select):focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    h1,h2,p { margin:0; }
+    .shell { display:flex; min-height:100vh; }
+    .workspace { flex:1; min-width:0; padding:30px clamp(16px,3vw,44px); }
+    .crumb { color:var(--muted); font-size:12px; }
+    .workspace h2 { font-size:clamp(26px,3vw,36px); margin:55px 0 7px; letter-spacing:-.035em; }
+    .workspace > p { color:var(--muted); }
+    .ghost-grid { display:grid; grid-template-columns:1.3fr .7fr; gap:16px; margin-top:26px; }
+    .ghost-card { padding:26px; min-height:150px; background:var(--surface); border:1px solid var(--line); border-radius:16px; }
+    .ghost-card span { font-size:12px; color:var(--muted); }
+    .ghost-card b { display:block; font-size:32px; margin-top:8px; }
+    .ghost-wide { margin-top:18px; min-height:200px; }
+    .rail { flex:none; width:76px; background:var(--rail); border-radius:20px 0 0 0; display:grid; align-content:space-between; justify-items:center; padding:22px 0 18px; }
+    .rail-mark { font-size:23px; font-weight:700; color:var(--accent); }
+    .rail-mode { font-size:12px; text-align:center; color:var(--muted); }
+    .rail-mode b { display:block; margin:auto; width:24px; height:24px; border:1px solid currentColor; border-radius:6px; }
+    .reopen { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:9px; padding:10px 15px; margin-top:24px; }
+    dialog { width:min(580px,calc(100% - 28px)); max-height:calc(100dvh - 28px); margin:auto; padding:0; overflow-y:auto; border:1px solid var(--line); border-radius:22px; background:var(--surface); color:var(--ink); box-shadow:0 30px 90px rgba(22,39,48,.23); scrollbar-width:thin; }
+    dialog::backdrop { background:rgba(47,66,76,.34); backdrop-filter:blur(6px); }
+    .form { padding:clamp(20px,3vw,32px); }
+    .dialog-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .eyebrow { color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.12em; }
+    .icon-button { width:40px; height:40px; display:grid; place-items:center; border:0; border-radius:50%; background:var(--soft); color:var(--ink); font-size:21px; }
+    .icon-button:hover { background:var(--line); }
+    h1 { font-size:clamp(28px,4vw,38px); line-height:1.15; letter-spacing:-.035em; margin:22px 0; }
+    .intro { padding:16px 18px; background:var(--soft); border-radius:13px; color:var(--muted); font-size:14px; }
+    .field { margin-top:22px; }
+    .field > label,.field > .field-label { display:block; font-size:14px; font-weight:650; margin-bottom:9px; }
+    .money-field { display:flex; align-items:center; gap:9px; padding:0 16px; border:1px solid var(--line); border-radius:12px; background:var(--soft); }
+    .money-field:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+    .money-field span { font-size:19px; font-weight:600; color:var(--muted); }
+    .money-field input { min-width:0; width:100%; height:52px; border:0; outline:none; background:transparent; color:var(--ink); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; }
+    .money-field input:focus-visible { outline:none; }
+    .hint { margin-top:6px; font-size:12px; color:var(--muted); }
+    .error { color:var(--danger); }
+    select { width:100%; min-height:52px; padding:0 15px; border:1px solid var(--line); border-radius:12px; background:var(--soft); color:var(--ink); font-weight:600; }
+    .risk-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .risk-head .field-label { font-size:14px; font-weight:650; }
+    .risk-head output { font-weight:700; color:var(--accent); }
+    .range-wrap { position:relative; margin:20px 9px 0; }
+    .range-rail { position:absolute; inset:8px 0 auto; height:7px; border-radius:999px; background:var(--line); pointer-events:none; }
+    .range-fill { display:block; width:33.333%; height:100%; border-radius:999px; background:var(--accent); }
+    .risk-range { display:block; position:relative; width:calc(100% + 20px); margin:0 -10px; height:24px; appearance:none; -webkit-appearance:none; background:transparent; cursor:pointer; }
+    .risk-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:22px; height:22px; border:4px solid var(--surface); border-radius:50%; background:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+    .risk-range::-moz-range-thumb { width:14px; height:14px; border:4px solid var(--surface); border-radius:50%; background:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+    .risk-stops { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px; margin-top:5px; }
+    .risk-stops button { min-width:0; min-height:44px; padding:5px 2px; border:0; background:none; color:var(--muted); font-size:12px; line-height:1.2; text-align:center; }
+    .risk-stops button:first-child { text-align:left; }
+    .risk-stops button:last-child { text-align:right; }
+    .risk-stops button[aria-pressed="true"] { color:var(--accent); font-weight:700; }
+    .risk-explain { margin-top:8px; padding:12px 14px; background:var(--soft); border-radius:11px; color:var(--muted); font-size:13px; }
+    .risk-explain.high { color:var(--danger); background:var(--danger-soft); }
+    .notice { margin-top:20px; padding:14px 16px; border-radius:12px; background:var(--soft); color:var(--muted); font-size:13px; }
+    .notice button { margin-top:4px; border:0; padding:2px 0; background:none; color:var(--accent); font-weight:650; text-decoration:underline; }
+    .submit { display:block; width:100%; min-height:52px; margin-top:20px; border:0; border-radius:12px; background:var(--accent); color:var(--accent-ink); font-size:15px; font-weight:700; }
+    .submit:disabled { cursor:not-allowed; opacity:.5; }
+    .footer { margin-top:14px; color:var(--muted); text-align:center; font-size:12px; letter-spacing:.04em; }
+    .preview-tools { margin-top:13px; padding-top:12px; border-top:1px solid var(--line); text-align:center; color:var(--muted); font-size:12px; }
+    .preview-tools label { cursor:pointer; }
+    .preview-tools input { accent-color:var(--accent); vertical-align:middle; }
+    .feedback { margin-top:9px; text-align:center; color:var(--green); font-size:13px; }
+    :where(body,.rail,dialog,.icon-button,.intro,.money-field,select,.risk-explain,.notice,.submit){transition:background-color .24s ease,color .24s ease,border-color .24s ease;}
+    @media(max-width:640px){.rail{display:none}.workspace{padding:18px 12px}.workspace h2{margin-top:26px}.ghost-grid{grid-template-columns:1fr}.ghost-card{min-height:100px}dialog{border-radius:18px}}
+    @media(max-width:360px){.form{padding:18px}.risk-stops button{font-size:11px}.intro{padding:12px}.money-field input{font-size:17px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <main class="workspace"><div class="crumb">Workspace / <strong>Overview</strong></div><h2>Here’s how Atlas is doing.</h2><p>A simple view of your simulated account and market.</p><div class="ghost-grid"><div class="ghost-card"><span>Atlas result so far</span><b>+$398.45</b></div><div class="ghost-card"><span>Account value now</span><b>$100,398</b></div></div><div class="ghost-card ghost-wide"><strong>What’s happening</strong><p>Atlas checks prices and waits for an opportunity.</p></div><button class="reopen" type="button" id="reopen">Open simulation setup</button></main>
+    <aside class="rail" aria-hidden="true"><span class="rail-mark">M</span><div class="rail-mode"><b>B</b>Basic</div></aside>
+  </div>
+  <dialog id="setup" aria-labelledby="dialog-title" aria-describedby="intro">
+    <form class="form" id="experiment-form" novalidate>
+      <div class="dialog-top"><span class="eyebrow">NEW EXPERIMENT</span><button class="icon-button" type="button" id="close" aria-label="Close preview" title="Close preview">×</button></div>
+      <h1 id="dialog-title">Start a new simulation</h1>
+      <p class="intro" id="intro">Atlas and the comparison each start with <strong id="capital-summary">$100,000</strong> in simulated money. No real trades.</p>
+      <div class="field"><label for="capital">Starting money · USD</label><div class="money-field"><span aria-hidden="true">$</span><input id="capital" type="number" inputmode="numeric" min="1000" max="1000000" step="1000" value="100000" required aria-describedby="capital-hint"></div><p class="hint" id="capital-hint">Choose $1,000 to $1,000,000 in steps of $1,000.</p></div>
+      <div class="field"><label for="market">Market style</label><select id="market"><option value="balanced">Balanced · a little of everything</option><option value="volatile">Volatile · bigger price moves</option><option value="retail">Retail crowd · more individual traders</option></select></div>
+      <div class="field"><div class="risk-head"><label class="field-label" for="risk">Risk level</label><output id="risk-name" for="risk">Balanced</output></div><div class="range-wrap"><div class="range-rail" aria-hidden="true"><span class="range-fill" id="range-fill"></span></div><input class="risk-range" id="risk" type="range" min="0" max="3" step="1" value="1" aria-describedby="risk-explain"></div><div class="risk-stops" aria-label="Choose risk level"><button type="button" data-risk="0">Cautious</button><button type="button" data-risk="1">Balanced</button><button type="button" data-risk="2">Assertive</button><button type="button" data-risk="3">Super risky</button></div><p class="risk-explain" id="risk-explain" aria-live="polite"></p></div>
+      <div class="notice" id="settling-notice" hidden>The current experiment is still settling. Finish it first in the app before starting another.</div>
+      <button class="submit" id="submit" type="submit">Start simulation</button>
+      <p class="footer">Simulated capital only · No broker connection</p>
+      <div class="preview-tools"><label><input id="settling" type="checkbox"> Preview a run that is still settling</label><p>Interactive design preview only. Nothing will be started.</p></div>
+      <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
+  <script>
+    const dialog = document.querySelector('#setup');
+    const capital = document.querySelector('#capital');
+    const summary = document.querySelector('#capital-summary');
+    const capitalHint = document.querySelector('#capital-hint');
+    const risk = document.querySelector('#risk');
+    const riskName = document.querySelector('#risk-name');
+    const riskExplain = document.querySelector('#risk-explain');
+    const fill = document.querySelector('#range-fill');
+    const settling = document.querySelector('#settling');
+    const submit = document.querySelector('#submit');
+    const feedback = document.querySelector('#feedback');
+    const levels = [
+      ['Cautious', 'Atlas uses smaller positions and stops after a smaller account drop. Up to 10% per company, 30% invested; 4% account loss halt.'],
+      ['Balanced', 'A middle-ground setting. Up to 20% per company, 60% invested; 8% account loss halt.'],
+      ['Assertive', 'Atlas can invest more. Up to 30% per company, 90% invested; 12% account loss halt.'],
+      ['Super risky', 'High risk: Atlas trades more often and has no automatic account loss halt. Losses, slippage, and fees can add up quickly.'],
+    ];
+    function refresh() {
+      const amount = Number(capital.value);
+      const valid = capital.validity.valid && Number.isFinite(amount);
+      summary.textContent = valid ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(amount) : 'your chosen amount';
+      capitalHint.classList.toggle('error', !valid);
+      capitalHint.textContent = valid ? 'Choose $1,000 to $1,000,000 in steps of $1,000.' : 'Enter $1,000–$1,000,000 in steps of $1,000.';
+      capital.setAttribute('aria-invalid', String(!valid));
+      const index = Number(risk.value);
+      riskName.textContent = levels[index][0];
+      riskExplain.textContent = levels[index][1];
+      riskExplain.classList.toggle('high', index === 3);
+      fill.style.width = `${index / 3 * 100}%`;
+      document.querySelectorAll('[data-risk]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.risk) === index)));
+      document.querySelector('#settling-notice').hidden = !settling.checked;
+      submit.disabled = !valid || settling.checked;
+    }
+    capital.addEventListener('input', () => { feedback.textContent = ''; refresh(); });
+    risk.addEventListener('input', () => { feedback.textContent = ''; refresh(); });
+    settling.addEventListener('change', () => { feedback.textContent = ''; refresh(); });
+    document.querySelectorAll('[data-risk]').forEach(button => button.addEventListener('click', () => { risk.value = button.dataset.risk; feedback.textContent = ''; refresh(); }));
+    document.querySelector('#experiment-form').addEventListener('submit', event => { event.preventDefault(); refresh(); if (!submit.disabled) feedback.textContent = 'Preview only. No simulation was started.'; });
+    document.querySelector('#close').addEventListener('click', () => dialog.close());
+    document.querySelector('#reopen').addEventListener('click', () => dialog.showModal());
+    refresh(); dialog.showModal();
+  </script>
+</body>
+</html>
