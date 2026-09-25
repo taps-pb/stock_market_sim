@@ -24,7 +24,7 @@ function Synthetic({ snap, connected, busy, onControl, onNewExperiment }: Props 
   const arena = snap.arena, a = arena.agent;
   const done = terminal(arena.status), settling = arena.status === 'settling', paused = arena.status === 'paused';
   const warmingUp = !done && snap.tick < arena.warmup;
-  const signals = !warmingUp && !done && !paused && snap.model?.signals
+  const signals = connected && !warmingUp && !done && !paused && !settling && !arena.agent_halted && snap.model?.signals
     ? snap.symbols.flatMap(s => snap.model?.signals[s.symbol] ? [{ name: s.name, signal: snap.model.signals[s.symbol] }] : []).slice(0, 2)
     : [];
   const headline = done ? 'This experiment has ended.' : paused ? 'The simulation is paused.' : settling ? 'The experiment is finishing.' : warmingUp ? 'Atlas is getting ready.' : 'Here’s how Atlas is doing.';
@@ -37,17 +37,25 @@ function Synthetic({ snap, connected, busy, onControl, onNewExperiment }: Props 
       <section className={`basic-result ${a.net_pnl < 0 ? 'negative' : ''}`}><span className="eyebrow">Atlas result so far</span><strong>{signedMoney(a.net_pnl)}</strong><p>{pct(a.return_pct)} from the {money(a.initial)} starting amount.{a.positions.length ? ' Includes shares still held, valued at their latest price.' : ''}</p></section>
       <section className="basic-balance"><span className="eyebrow">Account value now</span><strong>{money(a.total)}</strong><p>Includes cash and shares Atlas owns.</p></section>
     </div>
-    <div className="basic-grid">
-      <section aria-labelledby="basic-stocks-heading"><div className="basic-section-head"><h2 id="basic-stocks-heading">The six companies</h2><p>Prices in this simulated market right now.</p></div><div className="basic-stock-list">
-        {snap.symbols.slice(0, 6).map(s => { const change = s.open ? (s.last / s.open - 1) * 100 : 0; return <div className="basic-stock-row" key={s.symbol}><div><strong>{s.name}</strong><small>{s.symbol}</small></div><b>{money(s.last, 2)}</b><em className={change >= 0 ? 'positive' : 'negative'}>{pct(change)}</em></div>; })}
-        {!snap.symbols.length && <div className="empty-inline">Waiting for the listed companies.</div>}
-      </div></section>
-      <section aria-labelledby="basic-now-heading"><div className="basic-section-head"><h2 id="basic-now-heading">What’s happening</h2><p>Plain-language update from the experiment.</p></div><div className="basic-update"><h3>{update}</h3>
-        {signals.map(({ name, signal }) => <p className="basic-call" key={name}><strong>{name}</strong> <span className={signal.dir === 'up' ? 'positive' : 'negative'}>{signal.dir === 'up' ? 'may rise' : 'may fall'}</span> over the next {snap.model?.horizon} simulation steps.</p>)}
+    <section className="basic-update" aria-labelledby="basic-now-heading">
+      <div className="basic-update-main">
+        <div className="basic-update-copy"><h2 id="basic-now-heading">What’s happening</h2><h3>{update}</h3></div>
+        {signals.length > 0 && <div className="basic-signals">
+          {signals.map(({ name, signal }) => <p className="basic-call" key={name}><strong>{name}</strong> <span className={signal.dir === 'up' ? 'positive' : 'negative'}>{signal.dir === 'up' ? 'may rise' : 'may fall'}</span> over the next {snap.model?.horizon} simulation steps.</p>)}
+        </div>}
+      </div>
+      <div className="basic-update-bottom">
         <p className="basic-caveat">These are guesses in a made-up market, not advice or promises.</p>
-      </div></section>
-    </div>
-    <Actions paused={paused} disabled={busy || !connected || done || settling} newDisabled={busy || !connected || settling} onControl={onControl} onNewExperiment={onNewExperiment}/>
+        <Actions paused={paused} disabled={busy || !connected || done || settling} newDisabled={busy || !connected || settling} onControl={onControl} onNewExperiment={onNewExperiment}/>
+      </div>
+    </section>
+    <section aria-labelledby="basic-stocks-heading">
+      <div className="basic-section-head"><div><h2 id="basic-stocks-heading">The six companies</h2><p>Current prices in this simulated market.</p></div><small>Change since the run began</small></div>
+      <div className="basic-company-grid">
+        {snap.symbols.slice(0, 6).map(s => { const change = s.open ? (s.last / s.open - 1) * 100 : 0; return <article className="basic-company" key={s.symbol}><div className="basic-company-top"><strong>{s.name}</strong><span>{s.symbol}</span></div><div className="basic-company-values"><b>{money(s.last, 2)}</b><em className={change >= 0 ? 'positive' : 'negative'}>{pct(change)}</em></div></article>; })}
+      </div>
+      {!snap.symbols.length && <div className="empty-inline">Waiting for the listed companies.</div>}
+    </section>
     <p className="basic-note">Simulated market and money only. Want charts, detailed forecasts, and the decision journal? Switch to Pro mode.</p>
   </div>;
 }
