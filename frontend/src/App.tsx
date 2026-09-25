@@ -15,8 +15,12 @@ import DepthLadder from './components/DepthLadder';
 import Tape from './components/Tape';
 import ReplayView from './components/ReplayView';
 import { readTheme, THEME_KEY, type Theme } from './theme';
+import { readMode, MODE_KEY, type Mode } from './mode';
+import BasicView from './components/BasicView';
+import BasicRunHistory from './components/BasicRunHistory';
 
 const views = [['arena', 'Live arena', 'arena', 'Live'], ['participants', 'Market participants', 'people', 'People'], ['history', 'Run history', 'history', 'History'], ['desk', 'Manual trading desk', 'chart', 'Trade']] as const;
+const basicViews = [['arena', 'Overview', 'arena', 'Home'], ['history', 'Past runs', 'history', 'Runs']] as const;
 function Icon({ name }: { name: string }) {
   const paths: Record<string, string> = {
     arena: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -35,12 +39,20 @@ function ThemeToggle({ theme, onToggle, className }: { theme: Theme; onToggle: (
   </button>;
 }
 
+function ModeToggle({ mode, onToggle, className }: { mode: Mode; onToggle: () => void; className: string }) {
+  const label = `Switch to ${mode === 'basic' ? 'Pro' : 'Basic'} mode`;
+  return <button type="button" className={`mode-toggle ${className}`} onClick={onToggle} aria-label={label} title={label}><b aria-hidden="true">{mode === 'basic' ? 'B' : 'P'}</b><span aria-hidden="true">{mode === 'basic' ? 'Basic' : 'Pro'}</span></button>;
+}
+
 export default function App() {
   const [view, setView] = useState('arena'), [setup, setSetup] = useState(false);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const { snap, replay, connected, setSnap, setConnected, setPortfolio, select } = useStore();
   const arena = replay?.arena ?? snap?.arena;
+  const [mode, setMode] = useState<Mode>(readMode);
   const [theme, setTheme] = useState<Theme>(readTheme);
+  useEffect(() => { try { localStorage.setItem(MODE_KEY, mode); } catch {} }, [mode]);
+  function toggleMode() { setMode(current => current === 'basic' ? 'pro' : 'basic'); if (view !== 'history') setView('arena'); }
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101a22' : '#f2f6f7');
@@ -60,15 +72,16 @@ export default function App() {
     finally { setBusy(false); }
   }
   const done = arena ? terminal(arena.status) : false;
-  const activeView = views.find(v => v[0] === view);
-  return <div className="app-shell">
+  const currentViews = mode === 'basic' ? basicViews : views;
+  const activeView = currentViews.find(v => v[0] === view);
+  return <div className="app-shell" data-mode={mode}>
     <aside className="sidebar">
       <a className="brand" href="#" onClick={e => { e.preventDefault(); setView('arena'); }}><span className="brand-mark"><i/><i/><i/></span><span>market<span className="brand-light">lab</span></span></a>
       <div className="workspace-label"><span className="workspace-icon">M</span><div>Local workspace<small>Simulated</small></div></div>
       <div className="nav-label">Navigation</div>
-      <nav>{views.map(([id, label, icon]) => <button key={id} onClick={() => setView(id)} aria-label={label} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined}><Icon name={icon}/><span>{label}</span>{id === 'arena' && <i className="nav-live"/>}</button>)}</nav>
+      <nav>{currentViews.map(([id, label, icon]) => <button key={id} onClick={() => setView(id)} aria-label={label} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined}><Icon name={icon}/><span>{label}</span>{id === 'arena' && <i className="nav-live"/>}</button>)}</nav>
       <div className="sidebar-experiment"><div className="eyebrow">Current experiment</div><strong>{replay ? 'Historical replay' : snap ? money(snap.arena.settings.capital) : '—'}</strong><p>{replay ? 'Two frozen models' : 'Atlas + buy-and-hold'}<br/>Seed {arena?.settings.seed ?? '—'} · <span className="capitalize">{replay ? 'Daily OHLCV' : snap?.arena.settings.scenario ?? 'balanced'}</span></p><button className="button primary full-width" onClick={() => setSetup(true)}>New experiment</button></div>
-      <div className="sidebar-bottom"><ThemeToggle theme={theme} onToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="rail-theme"/></div>
+      <div className="sidebar-bottom"><ModeToggle mode={mode} onToggle={toggleMode} className="rail-mode"/><ThemeToggle theme={theme} onToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="rail-theme"/></div>
     </aside>
     <div className={`main-shell view-shell-${view}`}>
       <header className="topbar">
@@ -76,6 +89,7 @@ export default function App() {
         <div className="breadcrumb">Workspace <span>/</span> <strong>{activeView?.[1]}</strong></div>
         <span className={`mobile-status ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? 'LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
         <div className="topbar-controls">
+          <ModeToggle mode={mode} onToggle={toggleMode} className="mobile-mode"/>
           <ThemeToggle theme={theme} onToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="mobile-theme"/>
           <div className="desktop-controls">
             <span className={`status-label ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? replay ? 'REPLAY RUNNING' : 'MARKET LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
@@ -109,20 +123,22 @@ export default function App() {
       </section>
       <main className={`workspace-content view-${view}`}>
         {error && <div className="notice negative" role="alert">{error}<button onClick={() => setError('')} className="icon-button" aria-label="Dismiss error">×</button></div>}
-        {view === 'arena' && (replay ? <ReplayView snapshot={replay}/> : <ArenaView onControl={act}/>)}
-        {view === 'participants' && (replay ? <div className="notice">Historical replay follows recorded bars. Synthetic participants are available in synthetic experiments.</div> : <Groups/>)}
-        {view === 'history' && <RunHistory/>}
-        {view === 'desk' && replay && <div className="notice">Historical replay measures forecasts and illustrative paper trades. Manual orders require a synthetic experiment.</div>}
-        {view === 'desk' && !replay && <section className="desk-view">
+        {mode === 'basic' && view === 'arena' && <BasicView snap={snap} replay={replay} connected={connected} busy={busy} onControl={act} onNewExperiment={() => setSetup(true)}/>}
+        {mode === 'basic' && view === 'history' && <BasicRunHistory/>}
+        {mode === 'pro' && view === 'arena' && (replay ? <ReplayView snapshot={replay}/> : <ArenaView onControl={act}/>)}
+        {mode === 'pro' && view === 'participants' && (replay ? <div className="notice">Historical replay follows recorded bars. Synthetic participants are available in synthetic experiments.</div> : <Groups/>)}
+        {mode === 'pro' && view === 'history' && <RunHistory/>}
+        {mode === 'pro' && view === 'desk' && replay && <div className="notice">Historical replay measures forecasts and illustrative paper trades. Manual orders require a synthetic experiment.</div>}
+        {mode === 'pro' && view === 'desk' && !replay && <section className="desk-view">
           <div className="page-heading"><div><div className="eyebrow">Manual trading</div><h1>Trade alongside the agent</h1><p>Your orders affect the same market. Your account is separate from Atlas.</p></div><span className="version-tag">Manual orders</span></div>
           <Watchlist/><div className="manual-grid"><Chart/><div className="market-side"><TradeTicket/><DepthLadder/></div></div><div className="lower-grid"><PortfolioView/><Tape/></div>
         </section>}
       </main>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {views.map(([id, label, icon, shortLabel]) => <button key={id} onClick={() => setView(id)} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined} aria-label={label}><Icon name={icon}/><span>{shortLabel}</span></button>)}
+        {currentViews.map(([id, label, icon, shortLabel]) => <button key={id} onClick={() => setView(id)} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined} aria-label={label}><Icon name={icon}/><span>{shortLabel}</span></button>)}
       </nav>
       <footer className="workspace-footer"><span><i className="dot teal"/> Market Lab <b>/</b> Simulated trading experiments</span><span>{replay ? 'Historical data · Simulated trades' : 'Simulated market · No real funds'} · <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">Charts powered by TradingView</a></span></footer>
     </div>
-    <NewExperiment open={setup} close={() => { setSetup(false); setView('arena'); }} finish={() => act('finish')}/>
+    <NewExperiment basic={mode === 'basic'} open={setup} close={() => { setSetup(false); setView('arena'); }} finish={() => act('finish')}/>
   </div>;
 }

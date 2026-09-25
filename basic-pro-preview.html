@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en" data-mode="basic" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Market Lab · Basic and Pro preview</title>
+  <style>
+    :root {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color-scheme: light;
+      --canvas: #f2f6f7; --surface: #fff; --soft: #f5f9fb; --border: #d4e1e7;
+      --ink: #26343d; --muted: #617480; --primary: #557a95; --primary-ink: #fff;
+      --blue-soft: #e3edf2; --green: #3e7c61; --green-soft: #e7f1ea;
+      --red: #a9525e; --rail: #c8dae4; --rail-ink: #3d5868;
+      --shadow: 0 8px 26px rgba(38, 52, 61, .06);
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --canvas: #101a22; --surface: #192630; --soft: #1d2c37; --border: #344954;
+      --ink: #e9f1f4; --muted: #adbfca; --primary: #a4c8df; --primary-ink: #101a22;
+      --blue-soft: #2b4252; --green: #9bd4b1; --green-soft: #233c35;
+      --red: #efaaa9; --rail: #17242e; --rail-ink: #bed0db;
+      --shadow: 0 10px 28px rgba(0, 0, 0, .13);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; min-width: 320px; overflow-x: clip; }
+    body { background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5; }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(28px, 3vw, 36px); line-height: 1.18; letter-spacing: -.035em; }
+    h2 { font-size: 18px; letter-spacing: -.015em; }
+    h3 { font-size: 15px; }
+    .muted { color: var(--muted); }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .shell { display: flex; min-height: 100vh; }
+    .main { flex: 1; min-width: 0; }
+    .rail { position: sticky; top: 0; align-self: flex-start; flex: none; width: 76px; height: 100dvh; padding: 24px 10px 16px; background: var(--rail); border-radius: 22px 0 0 22px; color: var(--rail-ink); display: flex; align-items: center; flex-direction: column; overflow-y: auto; scrollbar-width: none; }
+    .rail::-webkit-scrollbar, .ticker::-webkit-scrollbar { display: none; }
+    .mark { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 9px; background: var(--primary); color: var(--primary-ink); font-weight: 750; font-size: 18px; }
+    .nav { display: grid; justify-items: center; gap: 10px; margin-top: 42px; width: 100%; }
+    .nav span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--rail-ink); }
+    .nav span.active { color: var(--primary-ink); background: var(--primary); }
+    .nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .rail-actions { margin-top: auto; display: grid; justify-items: center; gap: 9px; padding-top: 22px; }
+    .mode-button, .theme-button { border: 0; background: transparent; color: var(--rail-ink); border-radius: 12px; display: grid; place-items: center; }
+    .mode-button { width: 50px; min-height: 58px; padding: 5px 0; gap: 1px; }
+    .mode-button b { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid currentColor; border-radius: 7px; font-size: 14px; line-height: 1; }
+    .mode-button span { font-size: 12px; line-height: 1; font-weight: 600; }
+    .mode-button:hover, .theme-button:hover { background: var(--blue-soft); color: var(--ink); }
+    .theme-button { width: 44px; height: 44px; }
+    .theme-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .theme-button .sun, [data-theme="dark"] .theme-button .moon { display: none; }
+    [data-theme="dark"] .theme-button .sun { display: block; }
+    .mobile-actions, .mobile-nav { display: none; }
+    .topbar { min-height: 73px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px clamp(16px, 3vw, 42px); border-bottom: 1px solid var(--border); }
+    .crumb { font-size: 13px; color: var(--muted); }
+    .crumb strong { color: var(--ink); font-weight: 600; }
+    .top-right { display: flex; align-items: center; gap: 12px; }
+    .live { color: var(--green); font-size: 12px; letter-spacing: .04em; font-weight: 700; white-space: nowrap; }
+    .live::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: currentColor; vertical-align: 1px; }
+    .action { border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; }
+    .action:hover { background: var(--blue-soft); }
+    .action.primary { border-color: var(--primary); background: var(--primary); color: var(--primary-ink); }
+    .action.primary:hover { filter: brightness(.94); }
+    .page { width: min(100%, 1460px); margin: auto; padding: 27px clamp(16px, 3vw, 42px) 70px; }
+    .preview-note { margin-bottom: 23px; color: var(--muted); font-size: 12px; }
+    .eyebrow { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .page-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 22px; }
+    .page-head h1 { margin-top: 5px; }
+    .page-head p { color: var(--muted); margin-top: 9px; }
+    .label { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; background: var(--blue-soft); border-radius: 999px; color: var(--ink); font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+    .basic-overview { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(250px, .7fr); gap: 16px; margin-bottom: 28px; }
+    .result { padding: clamp(21px, 3vw, 32px); background: var(--green-soft); }
+    .result .eyebrow { color: var(--green); }
+    .result strong { display: block; color: var(--green); font-size: clamp(30px, 4vw, 44px); letter-spacing: -.05em; font-variant-numeric: tabular-nums; margin: 6px 0 3px; }
+    .result p { font-size: 14px; color: var(--ink); }
+    .balance { padding: clamp(21px, 3vw, 32px); }
+    .balance strong { display: block; font-size: clamp(24px, 3vw, 31px); letter-spacing: -.04em; margin: 14px 0 4px; font-variant-numeric: tabular-nums; }
+    .basic-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .85fr); gap: 16px; }
+    .section-head { margin-bottom: 12px; }
+    .section-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .stock-list { overflow: hidden; }
+    .stock-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 80px; gap: 10px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+    .stock-row:last-child { border-bottom: 0; }
+    .stock-row strong { display: block; font-size: 14px; }
+    .stock-row small { display: block; font-size: 12px; color: var(--muted); }
+    .stock-row b, .stock-row em { text-align: right; font-size: 14px; font-style: normal; font-variant-numeric: tabular-nums; }
+    .stock-row em { font-weight: 600; }
+    .simple-panel { padding: 21px; }
+    .simple-panel p { margin-top: 9px; color: var(--muted); font-size: 13px; }
+    .plain-call { padding: 13px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .plain-call:last-of-type { border-bottom: 0; }
+    .plain-call strong { color: var(--ink); }
+    .plain-call span { font-weight: 650; }
+    .caveat { display: block; padding: 11px 12px; margin-top: 12px; border-radius: 9px; background: var(--blue-soft); color: var(--ink); font-size: 12px; }
+    .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+    .footnote { color: var(--muted); font-size: 12px; margin-top: 20px; }
+
+    /* Pro preview keeps denser current dashboard structure. Basic never renders charts. */
+    .ticker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); overflow-x: auto; scrollbar-width: none; margin-bottom: 28px; }
+    .ticker div { min-width: 0; padding: 12px 14px; border-right: 1px solid var(--border); font-size: 12px; }
+    .ticker div:last-child { border-right: 0; }
+    .ticker strong, .ticker span { display: block; }
+    .ticker strong { font-variant-numeric: tabular-nums; }
+    .ticker span { color: var(--muted); }
+    .pro-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; overflow: hidden; }
+    .pro-metrics div { min-width: 0; padding: 20px; border-right: 1px solid var(--border); }
+    .pro-metrics div:last-child { border-right: 0; }
+    .pro-metrics .hero { background: var(--green-soft); }
+    .pro-metrics small { color: var(--muted); font-size: 12px; }
+    .pro-metrics strong { display: block; font-size: clamp(19px, 2vw, 26px); letter-spacing: -.03em; margin: 8px 0 4px; white-space: nowrap; }
+    .pro-metrics p { color: var(--muted); font-size: 12px; }
+    .pro-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(275px, 1fr); gap: 16px; margin-bottom: 18px; }
+    .pro-panel { padding: 19px; min-width: 0; }
+    .pro-panel > p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .chart { width: 100%; height: 205px; margin-top: 14px; }
+    .chart .grid { stroke: var(--border); stroke-dasharray: 3 5; }
+    .chart .forecast { stroke: var(--primary); }
+    .chart .actual { stroke: var(--green); }
+    .chart .forecast, .chart .actual { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-note { display: flex; gap: 14px; color: var(--muted); font-size: 12px; }
+    .pro-stat { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); font-size: 13px; }
+    .pro-stat:first-of-type { margin-top: 16px; }
+    .pro-stat b { font-variant-numeric: tabular-nums; }
+    .forecast-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }
+    .forecast { padding: 13px; background: var(--soft); border: 1px solid var(--border); border-radius: 11px; }
+    .forecast strong, .forecast small { display: block; }
+    .forecast small { color: var(--muted); font-size: 12px; margin: 6px 0; }
+    .forecast b { font-size: 16px; }
+
+    [data-mode="basic"] .pro-view, [data-mode="pro"] .basic-view, [data-mode="basic"] .pro-only, [data-mode="pro"] .basic-only { display: none !important; }
+    :where(html,body,.rail,.topbar,.card,.action,.stock-row,.mode-button,.theme-button,.nav span,.label) { transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, box-shadow 240ms ease; }
+    @media (max-width: 1050px) { .basic-grid, .pro-grid { grid-template-columns: 1fr; } .ticker { grid-template-columns: repeat(3, minmax(140px, 1fr)); } }
+    @media (max-width: 740px) { .basic-overview { grid-template-columns: 1fr 1fr; } .pro-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pro-metrics div:nth-child(2) { border-right: 0; } .forecast-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) {
+      .rail { display: none; }
+      .topbar { position: sticky; z-index: 2; top: 0; min-height: 63px; padding: 9px 12px; background: var(--canvas); }
+      .crumb { font-size: 12px; white-space: nowrap; }
+      .top-right { gap: 7px; }
+      .top-right > .pro-only { display: none !important; }
+      .live { display: none; }
+      .mobile-actions { display: flex; align-items: center; gap: 6px; }
+      .mobile-actions .mode-button { width: 66px; min-height: 40px; padding: 4px 7px; display: flex; gap: 4px; background: var(--blue-soft); color: var(--ink); }
+      .mobile-actions .mode-button b { width: 23px; height: 23px; flex: none; font-size: 12px; }
+      .mobile-actions .mode-button span { font-size: 12px; }
+      .mobile-actions .theme-button { width: 40px; height: 40px; border: 1px solid var(--border); background: var(--surface); }
+      .page { padding: 19px 12px 98px; }
+      .preview-note { margin-bottom: 17px; }
+      .page-head { align-items: start; }
+      .page-head .label { display: none; }
+      .page-head p { font-size: 13px; }
+      .basic-overview { grid-template-columns: 1fr; gap: 10px; margin-bottom: 23px; }
+      .result, .balance { padding: 20px; }
+      .balance strong { margin: 8px 0 0; }
+      .stock-row { padding: 12px; grid-template-columns: minmax(0, 1fr) 74px 65px; gap: 5px; }
+      .stock-row b, .stock-row em { font-size: 13px; }
+      .simple-panel { padding: 17px; }
+      .quick-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .quick-actions .action { padding: 10px 6px; }
+      .ticker { display: flex; gap: 8px; border: 0; background: transparent; box-shadow: none; }
+      .ticker div { min-width: 125px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; }
+      .pro-metrics { background: transparent; border: 0; box-shadow: none; display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; }
+      .pro-metrics div, .pro-metrics div:nth-child(2) { min-width: 150px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 13px; }
+      .pro-metrics .hero { min-width: min(100%, 300px); background: var(--green-soft); }
+      .pro-panel { padding: 15px; }
+      .forecast-grid { gap: 7px; }
+      .forecast { padding: 9px; }
+      .forecast b { font-size: 14px; }
+      .mobile-nav { position: fixed; z-index: 3; inset: auto 0 0; display: flex; justify-content: space-around; gap: 5px; padding: 8px 8px max(9px,env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
+      .mobile-nav span { min-width: 58px; display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--muted); }
+      .mobile-nav .active { color: var(--primary); font-weight: 700; }
+      .mobile-nav b { font-size: 18px; line-height: 1; }
+    }
+    @media (max-width: 360px) { .forecast-grid { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="main">
+      <header class="topbar">
+        <div class="crumb">Market Lab <span aria-hidden="true"> / </span> <strong class="basic-only">Overview</strong><strong class="pro-only">Live arena</strong></div>
+        <div class="top-right">
+          <span class="live">MARKET LIVE</span>
+          <div class="mobile-actions"><button class="mode-button" data-mode-toggle type="button" aria-label="Switch to Pro mode" title="Switch to Pro mode"><b aria-hidden="true">B</b><span>Basic</span></button><button class="theme-button" data-theme-toggle type="button" aria-label="Switch to dark mode" title="Switch to dark mode"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.3A8.5 8.5 0 0 1 8.7 3.8 8.5 8.5 0 1 0 20.2 15.3Z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button></div>
+          <span class="pro-only"><button class="action" type="button" data-demo>Pause</button></span>
+          <button class="action primary pro-only" type="button" data-demo>New experiment</button>
+        </div>
+      </header>
+      <main class="page">
+        <p class="preview-note">Design preview · sample values only · switch modes on right sidebar (or phone header) · no live trading controls</p>
+        <div class="basic-view">
+          <div class="page-head"><div><span class="eyebrow">Live · your simulation</span><h1>Here’s how Atlas is doing.</h1><p>A simple view of the market and your simulated account.</p></div><span class="label">Basic mode</span></div>
+          <div class="basic-overview">
+            <section class="card result"><span class="eyebrow">Atlas result so far</span><strong>+$1,286.42</strong><p>Up 1.29% from the $100,000 starting amount.</p></section>
+            <section class="card balance"><span class="eyebrow">Account value now</span><strong>$101,286</strong><p class="muted">Includes cash and shares Atlas owns.</p></section>
+          </div>
+          <div class="basic-grid">
+            <section aria-labelledby="stocks-heading"><div class="section-head"><h2 id="stocks-heading">The six companies</h2><p>Prices in this simulated market right now.</p></div><div class="card stock-list">
+              <div class="stock-row"><div><strong>Nova Dynamics</strong><small>NOVA</small></div><b>$119.24</b><em class="positive">+1.2%</em></div>
+              <div class="stock-row"><div><strong>Helix Bio</strong><small>HELX</small></div><b>$79.55</b><em class="negative">−0.8%</em></div>
+              <div class="stock-row"><div><strong>Atlas Energy</strong><small>ATLS</small></div><b>$42.83</b><em class="positive">+0.7%</em></div>
+              <div class="stock-row"><div><strong>Orca Foods</strong><small>ORCA</small></div><b>$55.66</b><em class="negative">−0.4%</em></div>
+              <div class="stock-row"><div><strong>Vane Motors</strong><small>VANE</small></div><b>$31.74</b><em class="positive">+0.3%</em></div>
+              <div class="stock-row"><div><strong>Cirrus Tech</strong><small>CIRR</small></div><b>$139.50</b><em class="negative">−0.2%</em></div>
+            </div></section>
+            <section aria-labelledby="now-heading"><div class="section-head"><h2 id="now-heading">What’s happening</h2><p>Plain-language update from the experiment.</p></div><div class="card simple-panel">
+              <h3>Atlas is watching for an opportunity</h3><p>It checks prices and can buy or sell when its rules allow. It has no open buy waiting right now.</p>
+              <div class="plain-call"><strong>Nova Dynamics</strong> <span class="positive">may rise</span> over the next 20 simulation steps.</div>
+              <div class="plain-call"><strong>Helix Bio</strong> <span class="negative">may fall</span> over the next 20 simulation steps.</div>
+              <span class="caveat">These are guesses in a made-up market, not advice or promises.</span>
+            </div></section>
+          </div>
+          <div class="quick-actions"><button class="action" type="button" data-demo>Pause simulation</button><button class="action primary" type="button" data-demo>Start a new experiment</button></div>
+          <p class="footnote">Want forecasts, charts, and the decision journal? Switch to Pro using the button above the theme icon.</p>
+        </div>
+        <div class="pro-view">
+          <div class="ticker card"><div><strong>NOVA &nbsp; 119.24</strong><span>Tech · +1.2%</span></div><div><strong>HELX &nbsp; 79.55</strong><span>Biotech · −0.8%</span></div><div><strong>ATLS &nbsp; 42.83</strong><span>Energy · +0.7%</span></div><div><strong>ORCA &nbsp; 55.66</strong><span>Consumer · −0.4%</span></div><div><strong>VANE &nbsp; 31.74</strong><span>Auto · +0.3%</span></div><div><strong>CIRR &nbsp; 139.50</strong><span>Tech · −0.2%</span></div></div>
+          <div class="page-head"><div><span class="eyebrow">Live · balanced market</span><h1>Atlas is up <span class="positive">$1,286.42</span> this run.</h1></div><span class="label">Pro mode · full workspace</span></div>
+          <div class="pro-metrics card"><div class="hero"><small>Net result after fees</small><strong class="positive">+$1,286.42</strong><p>+1.29% from starting capital</p></div><div><small>Account equity</small><strong>$101,286</strong><p>$63,940 cash available</p></div><div><small>Excess vs. buy &amp; hold</small><strong class="positive">+$524.80</strong><p>Benchmark +0.76%</p></div><div><small>Maximum drawdown</small><strong>1.84%</strong><p>8% stop threshold</p></div></div>
+          <div class="pro-grid"><section class="card pro-panel"><h2>Capital performance</h2><p>Atlas, buy-and-hold, and cash · equity by simulation tick</p><svg class="chart" viewBox="0 0 630 205" preserveAspectRatio="none" role="img" aria-label="Sample capital performance chart"><path class="grid" d="M0 38H630M0 102H630M0 167H630" fill="none"/><path class="forecast" d="M6 151L76 144L146 131L216 138L286 112L356 114L426 87L496 78L566 61L625 38"/><path class="actual" d="M6 162L76 155L146 151L216 133L286 144L356 120L426 117L496 106L566 85L625 75"/></svg><div class="chart-note"><span>Blue: Atlas</span><span>Green: buy &amp; hold</span></div></section><section class="card pro-panel"><h2>Atlas decision journal</h2><p>Recent examples · executed fills and reasoning</p><div class="pro-stat"><span>Tick 176 · Buy NOVA</span><b>12 shares</b></div><div class="pro-stat"><span>Tick 182 · No trade</span><b>Below entry threshold</b></div><div class="pro-stat"><span>Tick 192 · Sell ATLS</span><b>Holding period reached</b></div><p style="margin-top:12px">Orders only affect this simulated exchange.</p></section></div>
+          <section class="card pro-panel"><h2>Market forecast board</h2><p>Independent 20-tick calls · select a stock in the real app to inspect more detail.</p><div class="forecast-grid"><div class="forecast"><strong>NOVA · Nova Dynamics</strong><small>Current $119.24 · target 20 ticks</small><b class="positive">$120.63 · +1.17%</b></div><div class="forecast"><strong>HELX · Helix Bio</strong><small>Current $79.55 · target 20 ticks</small><b class="negative">$78.92 · −0.79%</b></div><div class="forecast"><strong>ATLS · Atlas Energy</strong><small>Current $42.83 · target 20 ticks</small><b class="positive">$43.11 · +0.65%</b></div></div></section>
+          <p class="footnote">Pro preserves existing charts, six-stock forecasts, historical review, participants, trading desk, and run history.</p>
+        </div>
+      </main>
+      <nav class="mobile-nav" aria-label="Preview navigation"><span class="basic-only active"><b>▦</b>Home</span><span class="basic-only"><b>◷</b>Runs</span><span class="pro-only active"><b>▦</b>Live</span><span class="pro-only"><b>♧</b>People</span><span class="pro-only"><b>◷</b>History</span><span class="pro-only"><b>⌁</b>Trade</span></nav>
+    </div>
+    <aside class="rail" aria-label="Preview navigation"><div class="mark">M</div><div class="nav basic-only" aria-label="Basic navigation"><span class="active" title="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg></span><span title="Past runs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.7 7M3 3v8h8M12 7v5l3 2"/></svg></span></div><div class="nav pro-only" aria-label="Pro navigation"><span class="active" title="Live arena"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg></span><span title="Participants"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span title="Run history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.7 7M3 3v8h8M12 7v5l3 2"/></svg></span><span title="Trading desk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M6 14l4-4 4 3 6-7"/></svg></span></div><div class="rail-actions"><button class="mode-button" data-mode-toggle type="button" aria-label="Switch to Pro mode" title="Switch to Pro mode"><b aria-hidden="true">B</b><span>Basic</span></button><button class="theme-button" data-theme-toggle type="button" aria-label="Switch to dark mode" title="Switch to dark mode"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.3A8.5 8.5 0 0 1 8.7 3.8 8.5 8.5 0 1 0 20.2 15.3Z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button></div></aside>
+  </div>
+  <script>
+    const root = document.documentElement;
+    function sync() {
+      document.querySelectorAll('[data-mode-toggle]').forEach(button => {
+        const mode = root.dataset.mode;
+        button.querySelector('b').textContent = mode === 'basic' ? 'B' : 'P';
+        button.querySelector('span').textContent = mode === 'basic' ? 'Basic' : 'Pro';
+        button.setAttribute('aria-label', `Switch to ${mode === 'basic' ? 'Pro' : 'Basic'} mode`);
+        button.title = button.getAttribute('aria-label');
+      });
+      document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+        button.setAttribute('aria-label', `Switch to ${root.dataset.theme === 'dark' ? 'light' : 'dark'} mode`);
+        button.title = button.getAttribute('aria-label');
+      });
+    }
+    try { root.dataset.mode = localStorage.getItem('market-lab-mode-preview') === 'pro' ? 'pro' : 'basic'; root.dataset.theme = localStorage.getItem('market-lab-theme-preview') === 'dark' ? 'dark' : 'light'; } catch {}
+    document.querySelectorAll('[data-mode-toggle]').forEach(button => button.addEventListener('click', () => { root.dataset.mode = root.dataset.mode === 'basic' ? 'pro' : 'basic'; try { localStorage.setItem('market-lab-mode-preview', root.dataset.mode); } catch {} sync(); }));
+    document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('market-lab-theme-preview', root.dataset.theme); } catch {} sync(); }));
+    document.querySelectorAll('[data-demo]').forEach(button => button.addEventListener('click', () => { button.blur(); alert('Design preview only. Simulation controls are not connected here.'); }));
+    sync();
+  </script>
+</body>
+</html>

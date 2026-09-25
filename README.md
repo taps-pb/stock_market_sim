@@ -40,6 +40,12 @@ optional. The default experiment funds Atlas and buy-and-hold with **$100,000
 each**, using seed 42.
 The exchange runs without an open browser.
 
+New browsers open in **Basic mode**: a plain-language overview of Atlas, six
+stock prices, simple controls, and saved-run recaps without charts. Switch to
+**Pro mode** using the button above the theme control in the right sidebar (or
+the phone header) for the complete workspace below. Mode and theme choices
+persist in that browser; both modes use the same simulation.
+
 1. Watch the first 60 ticks build observable market history.
 2. Inspect live equity, net profit after fees, drawdown, and performance against
    buy-and-hold. Switch the capital chart between dollars and percentage returns.

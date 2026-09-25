@@ -3,18 +3,19 @@ import { useStore, type Dataset } from '../store';
 import { startRun, startReplay, getDatasets, importDataset } from '../api';
 import { terminal } from '../format';
 
-export default function NewExperiment({ open, close, finish }: { open: boolean; close: () => void; finish: () => void }) {
+export default function NewExperiment({ open, close, finish, basic = false }: { open: boolean; close: () => void; finish: () => void; basic?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const arena = useStore(s => s.snap?.arena);
   const replay = useStore(s => s.replay);
   const setSnap = useStore(s => s.setSnap);
   const [capital, setCapital] = useState(100000), [seed, setSeed] = useState(101), [duration, setDuration] = useState(1500);
   const [scenario, setScenario] = useState('balanced'), [risk, setRisk] = useState('balanced');
+  const [basicScenario, setBasicScenario] = useState('balanced');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [mode, setMode] = useState('synthetic'), [datasets, setDatasets] = useState<Dataset[]>([]);
   const [dataset, setDataset] = useState(''), [sessions, setSessions] = useState(100);
   useEffect(() => { if (open) dialog.current?.showModal(); else dialog.current?.close(); }, [open]);
-  useEffect(() => { if (open) getDatasets().then(setDatasets).catch(e => setError(e.message)); }, [open]);
+  useEffect(() => { if (open && !basic) getDatasets().then(setDatasets).catch(e => setError(e.message)); }, [open, basic]);
   async function upload(file?: File) {
     if (!file) return;
     setBusy(true); setError('');
@@ -29,16 +30,21 @@ export default function NewExperiment({ open, close, finish }: { open: boolean; 
       : risk === 'super_risky' ? { max_position: .30, max_exposure: .90, max_drawdown: .30,
           stop_loss: .15, min_probability: .50, min_edge_bps: 0, slippage_bps: 100, participation: .50 }
       : { max_position: .20, max_exposure: .60, max_drawdown: .08 };
-    try { setSnap(mode === 'historical' ? await startReplay({ dataset_id: dataset, seed, duration: sessions })
+    try { setSnap(basic ? await startRun({ capital: 100000, seed: Date.now() >>> 0, duration: 1500, scenario: basicScenario, risk_profile: 'balanced', max_position: .20, max_exposure: .60, max_drawdown: .08 })
+      : mode === 'historical' ? await startReplay({ dataset_id: dataset, seed, duration: sessions })
       : await startRun({ capital, seed, duration, scenario, risk_profile: risk, ...profile })); close(); }
     catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
   const current = replay?.arena ?? arena;
   const running = current && !terminal(current.status);
-  return <dialog ref={dialog} className="experiment-dialog" onCancel={close} onClick={event => { if (event.target === dialog.current) close(); }}><form onSubmit={submit}>
+  return <dialog ref={dialog} className={`experiment-dialog ${basic ? 'basic-dialog' : ''}`} onCancel={close} onClick={event => { if (event.target === dialog.current) close(); }}><form onSubmit={submit}>
     <div className="dialog-heading"><div className="eyebrow">New experiment</div><button type="button" className="icon-button" onClick={close} aria-label="Close experiment setup">×</button></div>
-    <h1>Start an experiment</h1>
+    <h1>{basic ? 'Start a new simulation' : 'Start an experiment'}</h1>
+    {basic ? <><p className="experiment-intro">Atlas and a simple comparison each start with $100,000 in simulated money. This is not real trading.</p>
+      <label>Market style<select value={basicScenario} onChange={e => setBasicScenario(e.target.value)} disabled={busy}><option value="balanced">Balanced · a little of everything</option><option value="volatile">Volatile · bigger price moves</option><option value="retail">Retail crowd · more individual traders</option></select></label>
+      <p className="form-note">The run uses standard settings. Switch to Pro to adjust money, duration, and risk.</p>
+    </> : <>
     <label>Experiment type<select value={mode} onChange={e => setMode(e.target.value)} disabled={busy}><option value="synthetic">Synthetic exchange</option><option value="historical">Blind historical replay</option></select></label>
     {mode === 'historical' ? <>
       <p className="experiment-intro">Compare a synthetic-trained Atlas against a real-data model on hidden historical bars.</p>
@@ -72,9 +78,10 @@ export default function NewExperiment({ open, close, finish }: { open: boolean; 
     {risk === 'super_risky' && <div className="notice negative">High-risk profile: Atlas acts on every tick, enters on any bullish forecast regardless of edge, accumulates to its position cap, and exits on a bearish flip or after three ticks. Assumes 1% entry slippage, takes 50% of visible depth, and risks 30% per stock / 90% total. No automatic account loss halt — it will keep trading through losses until stopped or until it cannot fund a trade. Churn and fees can erode capital.</div>}
     <div className="form-note experiment-note">60 warmup ticks precede trading. At the end, accounts attempt to close all positions. Unfilled inventory stays visible in the result.</div>
     </>}
+    </>}
     {running && <div className="notice">The current experiment is still {current.status}. <button className="text-button" type="button" onClick={finish}>Finish it first</button></div>}
     {error && <div role="alert" className="notice negative">{error}</div>}
-    <button className="button primary full-width" type="submit" disabled={busy || !!running || (mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
+    <button className="button primary full-width" type="submit" disabled={busy || !!running || (!basic && mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : basic ? 'Start simulation' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
     <div className="dialog-footer">Simulated capital only · No broker connection</div>
   </form></dialog>;
 }
