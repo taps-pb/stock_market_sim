@@ -58,7 +58,10 @@ persist in that browser; both modes use the same simulation.
    its positions and prevents new buys while the other participants continue.
 6. Finish the run, inspect its saved forecast review and outlook, or export its
    JSON. **New experiment** lets you choose capital, seed, duration, market
-   environment, and risk profile. Older archives remain readable.
+   environment, and risk profile. Pro offers named market and duration presets
+   plus Custom: tune headline frequency/size, stress frequency, retail crowd
+   weight, and run length (100–10,000 ticks). Custom values are saved with the
+   run; older archives remain readable.
 
 An experiment trades for 1,500 ticks by default, after warmup. The clock targets
 four ticks per second at 1×; speed depends on the machine. Ticks are simulation

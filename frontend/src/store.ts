@@ -65,6 +65,7 @@ export type RunSettings = {
   max_position: number; max_exposure: number; max_drawdown: number;
   stop_loss: number; min_probability: number; min_edge_bps: number;
   slippage_bps: number; participation: number;
+  market?: { news_prob: number; news_notional: number; stress_enter_prob: number; retail_multiplier: number } | null;
 };
 export type CurvePoint = { tick: number; agent: number; hold: number; cash: number };
 export type Decision = {

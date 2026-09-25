@@ -14,3 +14,32 @@ backend/ml/data/dataset-v*.csv
 *.p12
 *.pfx
 .claude/settings.local.json
+
+# === GitLab Secret Guard ===
+# Extra credential formats (existing pre-commit hook scans staged contents).
+*.env
+.envrc
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+*.crt
+*.cer
+.aws/
+.gcloud/
+credentials.json
+service-account*.json
+*-service-account.json
+google-credentials.json
+config/secrets.*
+config/database.yml
+secrets.yml
+secrets.json
+database.yml
+*.secret
+*.secrets
+Thumbs.db
+.idea/
+.vscode/settings.json
+vendor/
+venv/

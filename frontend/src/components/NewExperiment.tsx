@@ -15,7 +15,10 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
   const arena = useStore(s => s.snap?.arena);
   const replay = useStore(s => s.replay);
   const setSnap = useStore(s => s.setSnap);
-  const [capital, setCapital] = useState(100000), [seed, setSeed] = useState(101), [duration, setDuration] = useState(1500);
+  const [capital, setCapital] = useState(100000), [seed, setSeed] = useState(101);
+  const [durationPreset, setDurationPreset] = useState('1500'), [customDuration, setCustomDuration] = useState('1500');
+  const [newsProb, setNewsProb] = useState('12'), [newsNotional, setNewsNotional] = useState('90000');
+  const [stressProb, setStressProb] = useState('0.3'), [retailMult, setRetailMult] = useState('1');
   const [basicCapital, setBasicCapital] = useState('100000');
   const [scenario, setScenario] = useState('balanced'), [risk, setRisk] = useState('balanced');
   const [basicScenario, setBasicScenario] = useState('balanced');
@@ -34,6 +37,7 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (basic && !basicCapitalValid) return;
+    if (proSynthetic && (!customMarketValid || !durationValid)) return;
     setBusy(true); setError('');
     const profile = risk === 'cautious' ? { max_position: .10, max_exposure: .30, max_drawdown: .04 }
       : risk === 'assertive' ? { max_position: .30, max_exposure: .90, max_drawdown: .12 }
@@ -42,7 +46,9 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
       : { max_position: .20, max_exposure: .60, max_drawdown: .08 };
     try { setSnap(basic ? await startRun({ capital: Number(basicCapital), seed: Date.now() >>> 0, duration: 1500, scenario: basicScenario, risk_profile: risk, ...profile })
       : mode === 'historical' ? await startReplay({ dataset_id: dataset, seed, duration: sessions })
-      : await startRun({ capital, seed, duration, scenario, risk_profile: risk, ...profile })); close(); }
+      : await startRun({ capital, seed, duration, scenario, risk_profile: risk, ...profile,
+          ...(scenario === 'custom' ? { market: { news_prob: newsProbValue / 100, news_notional: newsNotionalValue,
+            stress_enter_prob: stressValue / 100, retail_multiplier: retailValue } } : {}) })); close(); }
     catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -50,6 +56,17 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
   const running = current && !terminal(current.status);
   const amount = Number(basicCapital);
   const basicCapitalValid = basicCapital !== '' && Number.isFinite(amount) && amount >= 1000 && amount <= 1000000 && amount % 1000 === 0;
+  const proSynthetic = !basic && mode === 'synthetic';
+  const num = (value: string) => value.trim() === '' ? NaN : Number(value);
+  const onStep = (value: number, step: number) => Math.abs(value / step - Math.round(value / step)) < 1e-9;
+  const newsProbValue = num(newsProb), newsProbValid = Number.isInteger(newsProbValue) && newsProbValue >= 0 && newsProbValue <= 50;
+  const newsNotionalValue = num(newsNotional), newsNotionalValid = newsNotionalValue >= 10000 && newsNotionalValue <= 250000 && newsNotionalValue % 1000 === 0;
+  const stressValue = num(stressProb), stressValid = stressValue >= 0 && stressValue <= 5 && onStep(stressValue, .1);
+  const retailValue = num(retailMult), retailValid = retailValue >= .5 && retailValue <= 3 && onStep(retailValue, .1);
+  const customDurationValue = num(customDuration), customDurationValid = Number.isInteger(customDurationValue) && customDurationValue >= 100 && customDurationValue <= 10000;
+  const durationValid = durationPreset !== 'custom' || customDurationValid;
+  const customMarketValid = scenario !== 'custom' || (newsProbValid && newsNotionalValid && stressValid && retailValid);
+  const duration = durationPreset === 'custom' ? customDurationValue : Number(durationPreset);
   const riskIndex = Math.max(0, riskChoices.findIndex(choice => choice.key === risk));
   const selectedRisk = riskChoices[riskIndex];
   return <dialog ref={dialog} className={`experiment-dialog ${basic ? 'basic-dialog' : ''}`} onCancel={close} onClick={event => { if (event.target === dialog.current) close(); }}><form onSubmit={submit}>
@@ -93,15 +110,22 @@ export default function NewExperiment({ open, close, finish, basic = false }: { 
         <span className="hint" id="seed-hint">Reuse a seed to replay market conditions</span>
       </label>
     </div>
-    <label>Market environment<select value={scenario} onChange={e => setScenario(e.target.value)}><option value="balanced">Balanced · full participant mix</option><option value="volatile">Volatile · more news and liquidity shocks</option><option value="retail">Retail crowd · more FOMO and panic sellers</option></select></label>
-    <div className="form-grid"><label>Trading duration<select value={duration} onChange={e => setDuration(Number(e.target.value))}><option value="500">500 ticks · quick experiment</option><option value="1500">1,500 ticks · standard run</option><option value="3000">3,000 ticks · extended run</option></select></label><label>Risk profile<select value={risk} onChange={e => setRisk(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="assertive">Assertive</option><option value="super_risky">Super risky</option></select></label></div>
+    <label>Market environment<select value={scenario} onChange={e => setScenario(e.target.value)} disabled={busy}><option value="balanced">Balanced</option><option value="volatile">Volatile</option><option value="retail">Retail crowd</option><option value="custom">Custom</option></select></label>
+    {scenario === 'custom' && <div className="pro-custom-fields">
+      <label>Headline chance per tick · %<input type="number" required min="0" max="50" step="1" value={newsProb} aria-invalid={!newsProbValid} aria-describedby="news-prob-hint" disabled={busy} onChange={e => setNewsProb(e.target.value)}/><span className="pro-custom-hint" id="news-prob-hint">0–50% in whole numbers</span></label>
+      <label>Headline order size · USD<input type="number" required min="10000" max="250000" step="1000" value={newsNotional} aria-invalid={!newsNotionalValid} aria-describedby="news-notional-hint" disabled={busy} onChange={e => setNewsNotional(e.target.value)}/><span className="pro-custom-hint" id="news-notional-hint">$10,000–$250,000 in $1,000 steps</span></label>
+      <label>Stress entry chance per tick · %<input type="number" required min="0" max="5" step="0.1" value={stressProb} aria-invalid={!stressValid} aria-describedby="stress-hint" disabled={busy} onChange={e => setStressProb(e.target.value)}/><span className="pro-custom-hint" id="stress-hint">0–5% in 0.1 steps</span></label>
+      <label>Retail crowd multiplier<input type="number" required min="0.5" max="3" step="0.1" value={retailMult} aria-invalid={!retailValid} aria-describedby="retail-mult-hint" disabled={busy} onChange={e => setRetailMult(e.target.value)}/><span className="pro-custom-hint" id="retail-mult-hint">0.5–3.0 of the usual mix</span></label>
+    </div>}
+    <div className="form-grid"><label>Trading duration<select value={durationPreset} onChange={e => setDurationPreset(e.target.value)} disabled={busy}><option value="500">Quick</option><option value="1500">Standard</option><option value="3000">Extended</option><option value="custom">Custom</option></select></label><label>Risk profile<select value={risk} onChange={e => setRisk(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="assertive">Assertive</option><option value="super_risky">Super risky</option></select></label></div>
+    {durationPreset === 'custom' && <label className="pro-custom-duration">Custom duration · ticks<input type="number" required min="100" max="10000" step="1" value={customDuration} aria-invalid={!customDurationValid} aria-describedby="custom-duration-hint" disabled={busy} onChange={e => setCustomDuration(e.target.value)}/><span className="pro-custom-hint" id="custom-duration-hint">100–10,000 ticks in whole numbers</span></label>}
     {risk === 'super_risky' && <div className="notice negative">High-risk profile: Atlas acts on every tick, enters on any bullish forecast regardless of edge, accumulates to its position cap, and exits on a bearish flip or after three ticks. Assumes 1% entry slippage, takes 50% of visible depth, and risks 30% per stock / 90% total. No automatic account loss halt — it will keep trading through losses until stopped or until it cannot fund a trade. Churn and fees can erode capital.</div>}
     <div className="form-note experiment-note">60 warmup ticks precede trading. At the end, accounts attempt to close all positions. Unfilled inventory stays visible in the result.</div>
     </>}
     </>}
     {running && <div className="notice">The current experiment is still {current.status}. <button className="text-button" type="button" onClick={finish}>Finish it first</button></div>}
     {error && <div role="alert" className="notice negative">{error}</div>}
-    <button className="button primary full-width" type="submit" disabled={busy || !!running || (basic && !basicCapitalValid) || (!basic && mode === 'historical' && !dataset)}>{busy ? 'Preparing experiment…' : basic ? 'Start simulation' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
+    <button className="button primary full-width" type="submit" disabled={busy || !!running || (basic && !basicCapitalValid) || (!basic && mode === 'historical' && !dataset) || (proSynthetic && (!customMarketValid || !durationValid))}>{busy ? 'Preparing experiment…' : basic ? 'Start simulation' : mode === 'historical' ? 'Train models & start replay' : 'Start experiment'}</button>
     <div className="dialog-footer">Simulated capital only · No broker connection</div>
   </form></dialog>;
 }

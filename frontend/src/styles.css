@@ -1863,3 +1863,13 @@ td{border-color:#E7EEF1!important}
   .outlook-trajectory{padding:12px}
   .outlook-card-value{font-size:20px}
 }
+/* Pro custom environment fields use the existing experiment input style. */
+.experiment-dialog .pro-custom-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 20px;margin:0 0 22px;min-width:0}
+.experiment-dialog .pro-custom-fields>label{min-width:0;margin-bottom:0}
+.experiment-dialog .pro-custom-fields input[type="number"],.experiment-dialog .pro-custom-duration input[type="number"]{width:100%;min-width:0;max-width:100%}
+.experiment-dialog .pro-custom-duration{min-width:0;margin:0 0 22px}
+.experiment-dialog .pro-custom-hint{display:block;margin:6px 0 0;color:var(--muted);font-size:13px;font-weight:400;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:520px){
+  .experiment-dialog .pro-custom-fields{grid-template-columns:minmax(0,1fr);gap:0}
+  .experiment-dialog .pro-custom-fields>label{margin-bottom:22px}
+}

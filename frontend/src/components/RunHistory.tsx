@@ -40,6 +40,7 @@ export default function RunHistory() {
     const a = selected.arena;
     return <>{controls}
       <div className="page-heading"><div><div className="eyebrow">Archived experiment · Seed {a.settings.seed}</div><h1>{a.verdict}</h1><p>{a.settings.scenario} market · {a.elapsed.toLocaleString()} trading ticks · {new Date(a.created_at).toLocaleString()}</p></div></div>
+      {a.settings.market && <div className="notice">Custom market: headline chance {(a.settings.market.news_prob * 100).toFixed(0)}% per tick · headline order size {money(a.settings.market.news_notional)} · stress entry chance {(a.settings.market.stress_enter_prob * 100).toFixed(1)}% per tick · retail crowd ×{a.settings.market.retail_multiplier} · planned duration {a.settings.duration.toLocaleString()} ticks.</div>}
       <Performance arena={a}/><section className="panel"><EquityChart points={a.curve}/></section>
       {selected.model?.outlook && <MarketOutlook model={selected.model} symbols={selected.symbols}/>}
       {selected.model?.review && <ForecastReview model={selected.model} symbols={selected.symbols}/>}
@@ -59,7 +60,7 @@ export default function RunHistory() {
         <button type="button" aria-pressed={kind === 'historical'} onClick={() => { setKind('historical'); setOffset(0); }}>Historical</button>
       </div>
       <div className="history-dropdowns">
-        <label><span>Market</span><select value={scenario} onChange={e => { setScenario(e.target.value); setOffset(0); }}><option value="">All markets</option><option value="balanced">Balanced</option><option value="volatile">Volatile</option><option value="retail">Retail crowd</option></select></label>
+        <label><span>Market</span><select value={scenario} onChange={e => { setScenario(e.target.value); setOffset(0); }}><option value="">All markets</option><option value="balanced">Balanced</option><option value="volatile">Volatile</option><option value="retail">Retail crowd</option><option value="custom">Custom</option></select></label>
         <label><span>Status</span><select value={status} onChange={e => { setStatus(e.target.value); setOffset(0); }}><option value="">All statuses</option><option value="completed">Completed</option><option value="interrupted">Interrupted</option><option value="failed">Failed</option></select></label>
         <label><span>Outcome</span><select value={outcome} onChange={e => { setOutcome(e.target.value as typeof outcome); setOffset(0); }}><option value="">All outcomes</option><option value="profit">Profit</option><option value="loss">Loss</option></select></label>
       </div>

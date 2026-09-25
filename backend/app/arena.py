@@ -17,6 +17,8 @@ from .engine.simulation import SimEngine
 from ml.features import HISTORY
 
 AI_ID, HOLD_ID = "ATLAS", "HOLD"
+MARKET_RANGES = {"news_prob": (0.0, .5), "news_notional": (10_000, 250_000),
+                 "stress_enter_prob": (0.0, .05), "retail_multiplier": (.5, 3.0)}
 
 
 @dataclass
@@ -34,6 +36,7 @@ class Experiment:
     min_edge_bps: float = 20
     slippage_bps: float = 25
     participation: float = 0.25
+    market: dict[str, float] | None = None
 
     def __post_init__(self):
         ranges = {"capital": (1000, 1_000_000), "max_position": (.01, .30),
@@ -48,8 +51,17 @@ class Experiment:
             raise ValueError("seed must be an integer between 0 and 4294967295")
         if type(self.duration) is not int or not 100 <= self.duration <= 10_000:
             raise ValueError("duration must be an integer between 100 and 10000 ticks")
-        if self.scenario not in {"balanced", "volatile", "retail"}:
+        if self.scenario not in {"balanced", "volatile", "retail", "custom"}:
             raise ValueError("unknown market scenario")
+        if self.scenario == "custom":
+            if not isinstance(self.market, dict) or set(self.market) != set(MARKET_RANGES):
+                raise ValueError("custom market requires exactly news_prob, news_notional, stress_enter_prob and retail_multiplier")
+            for name, (low, high) in MARKET_RANGES.items():
+                value = self.market[name]
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value) or not low <= value <= high:
+                    raise ValueError(f"market.{name} must be between {low} and {high}")
+        elif self.market is not None:
+            raise ValueError("market overrides are only available in the custom scenario")
         if self.risk_profile not in {"cautious", "balanced", "assertive", "super_risky"}:
             raise ValueError("unknown risk profile")
         if self.max_position > self.max_exposure:
@@ -64,6 +76,14 @@ class Arena:
             cfg.news_prob, cfg.news_notional, cfg.stress_enter_prob = .25, 160_000, .02
         elif settings.scenario == "retail":
             cfg.mix = {**cfg.mix, "fomo": .40, "weak_hands": .25, "retail": .20}
+        elif settings.scenario == "custom":
+            market = settings.market  # validated by Experiment
+            assert market is not None
+            cfg.news_prob = market["news_prob"]
+            cfg.news_notional = market["news_notional"]
+            cfg.stress_enter_prob = market["stress_enter_prob"]
+            cfg.mix = {**cfg.mix, **{name: cfg.mix[name] * market["retail_multiplier"]
+                                     for name in ("fomo", "weak_hands", "retail")}}
         self.engine = SimEngine(cfg, SEED_COMPANIES)
         self.predictor = predictor
         self.id = uuid4().hex[:12]
