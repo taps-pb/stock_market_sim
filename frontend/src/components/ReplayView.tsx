@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createChart, ColorType, type UTCTimestamp, type Time } from 'lightweight-charts';
 import type { ReplaySnapshot } from '../store';
+import { useChartPalette } from '../chartTheme';
 
 const percent = (n: number | null | undefined) => n == null ? '—' : `${(n * 100).toFixed(1)}%`;
 const num = (n: number | null | undefined) => n == null ? '—' : n.toFixed(3);
@@ -11,16 +12,26 @@ function ReplayChart({ bars }: { bars: ReplaySnapshot['replay']['bars'] }) {
   const chart = useRef<ReturnType<typeof createChart>>();
   const fitted = useRef(false);
   const series = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']>>();
+  const palette = useChartPalette();
   useEffect(() => {
     if (!box.current) return;
-    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: '#F3F7F9' }, textColor: '#64747D', attributionLogo: false },
-      grid: { vertLines: { color: '#D8E3E8' }, horzLines: { color: '#D8E3E8' } },
-      timeScale: { tickMarkFormatter: (t: Time) => `Day ${Number(t)}` }, localization: { timeFormatter: (t: Time) => `Day ${Number(t)}` } });
+    const c = createChart(box.current, { autoSize: true, layout: { background: { type: ColorType.Solid, color: palette.bg }, textColor: palette.text, attributionLogo: false },
+      grid: { vertLines: { color: palette.grid }, horzLines: { color: palette.grid } },
+      timeScale: { borderColor: palette.grid, tickMarkFormatter: (t: Time) => `Day ${Number(t)}` },
+      rightPriceScale: { borderColor: palette.grid }, localization: { timeFormatter: (t: Time) => `Day ${Number(t)}` } });
     chart.current = c;
     fitted.current = false;
-    series.current = c.addCandlestickSeries({ upColor: '#3E7C61', downColor: '#B45E66', borderVisible: false, wickUpColor: '#3E7C61', wickDownColor: '#B45E66' });
+    series.current = c.addCandlestickSeries({ upColor: palette.up, downColor: palette.down, borderVisible: false, wickUpColor: palette.up, wickDownColor: palette.down });
     return () => { series.current = undefined; chart.current = undefined; c.remove(); };
   }, []);
+  useEffect(() => {
+    chart.current?.applyOptions({
+      layout: { background: { type: ColorType.Solid, color: palette.bg }, textColor: palette.text },
+      grid: { vertLines: { color: palette.grid }, horzLines: { color: palette.grid } },
+      timeScale: { borderColor: palette.grid }, rightPriceScale: { borderColor: palette.grid },
+    });
+    series.current?.applyOptions({ upColor: palette.up, downColor: palette.down, wickUpColor: palette.up, wickDownColor: palette.down });
+  }, [palette]);
   useEffect(() => {
     series.current?.setData(bars.map(b => ({ time: b.day as UTCTimestamp, open: b.open, high: b.high, low: b.low, close: b.close })));
     if (!fitted.current && bars.length) { chart.current?.timeScale().fitContent(); fitted.current = true; }

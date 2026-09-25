@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b1012" />
+    <meta name="theme-color" content="#f2f6f7" />
+    <script>try { document.documentElement.dataset.theme = localStorage.getItem('market-lab-theme') === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; } document.querySelector('meta[name="theme-color"]').content = document.documentElement.dataset.theme === 'dark' ? '#101a22' : '#f2f6f7';</script>
     <meta name="description" content="Fund an AI trader, watch a market of independent participants, and measure real simulated trading results." />
     <title>Market Lab — Agent Trading Arena</title>
   </head>

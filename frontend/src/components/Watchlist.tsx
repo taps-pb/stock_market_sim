@@ -12,7 +12,7 @@ export default function Watchlist() {
       const path = s.history.map((v, i) => `${i ? 'L' : 'M'}${i / Math.max(1, s.history.length - 1) * 72},${26 - (v - min) / range * 22}`).join(' ');
       return <button key={s.symbol} className={`market-chip ${selected === s.symbol ? 'selected' : ''}`} onClick={() => select(s.symbol)} aria-pressed={selected === s.symbol}>
         <div><strong>{s.symbol}</strong><span>{s.sector}</span></div>
-        <svg viewBox="0 0 74 30" aria-hidden="true"><path d={path} fill="none" stroke={change >= 0 ? '#2F7A5B' : '#A3464A'} strokeWidth="1.5"/></svg>
+        <svg viewBox="0 0 74 30" aria-hidden="true"><path d={path} fill="none" style={{ stroke: change >= 0 ? 'var(--green)' : 'var(--red)' }} strokeWidth="1.5"/></svg>
         <div><b>{s.last.toFixed(2)}</b><small className={change >= 0 ? 'up' : 'down'}>{pct(change)}</small></div>
       </button>;
     })}

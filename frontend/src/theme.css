@@ -1,0 +1,171 @@
+/* Approved steel-blue/sage dark palette. Keep the existing light layout intact. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  color: #e9f1f4;
+  background: #101a22;
+  --bg: #101a22;
+  --panel: #192630;
+  --surface-2: #1d2c37;
+  --line: #344954;
+  --accent: #a4c8df;
+  --accent-ink: #101a22;
+  --ink: #e9f1f4;
+  --muted: #adbfca;
+  --red: #efaaa9;
+  --green: #9bd4b1;
+  --amber: #d8b078;
+  --primary: #a4c8df;
+  --primary-dark: #86b0ca;
+  --primary-soft: #2b4252;
+  --secondary: #4a6576;
+  --secondary-soft: #1d2c37;
+  --blush: #1d2c37;
+  --rose: #a4c8df;
+  --red-soft: #3a2326;
+}
+[data-theme='dark'] body, [data-theme='dark'] .app-shell, [data-theme='dark'] .main-shell { background: #101a22; color: var(--ink); }
+[data-theme='dark'] ::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Right rail remains sticky while document scrolls. */
+html, body { overflow-x: clip; }
+@media (max-width:640px) { html, body { overflow-x: clip; } }
+@media (max-width:430px) { .app-shell, .main-shell { overflow-x: clip; } }
+.sidebar { position: sticky !important; top: 0 !important; align-self: flex-start; height: 100dvh; overflow-y: auto; scrollbar-width: none; }
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar .sidebar-bottom { width: 100%; padding: 0 !important; margin-top: auto; }
+.theme-toggle { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: transparent; color: var(--ink); border: 0; border-radius: 12px; cursor: pointer; }
+.theme-toggle svg { width: 20px; height: 20px; }
+.theme-toggle .sun, [data-theme='dark'] .theme-toggle .moon { display: none; }
+[data-theme='dark'] .theme-toggle .sun { display: block; }
+.sidebar .rail-theme { color: #58707e; }
+.sidebar .rail-theme:hover { background: #b7ceda; color: #26343d; }
+.mobile-theme { display: none; }
+[data-theme='dark'] .sidebar .rail-theme { color: #bed0db; }
+[data-theme='dark'] .sidebar .rail-theme:hover { background: #2b4252; color: var(--ink); }
+@media (max-width:640px) {
+  .mobile-theme { display: inline-flex; width: 42px; height: 42px; border: 1px solid var(--line); background: var(--panel); }
+  .mobile-theme:hover { background: var(--primary-soft); }
+  .mobile-theme svg { width: 18px; height: 18px; color: var(--accent); }
+}
+
+/* Surfaces with literal light values or !important in styles.css. */
+[data-theme='dark'] .app-shell::after, [data-theme='dark'] .sidebar { background: #17242e !important; color: #bed0db; }
+[data-theme='dark'] .sidebar nav button { color: #bed0db; }
+[data-theme='dark'] .sidebar nav button:hover { background: #2b4252; color: var(--ink); }
+[data-theme='dark'] .sidebar nav button.selected { background: var(--accent); color: var(--accent-ink); }
+[data-theme='dark'] .sidebar nav button.selected::before { background: #4a6576; }
+[data-theme='dark'] .topbar, [data-theme='dark'] .workspace-footer { background: var(--panel); color: var(--ink); }
+[data-theme='dark'] .breadcrumb strong, [data-theme='dark'] .brand { color: var(--ink); }
+[data-theme='dark'] .ticker, [data-theme='dark'] .panel, [data-theme='dark'] .metrics-grid,
+[data-theme='dark'] .population-summary { background: var(--panel) !important; box-shadow: 0 10px 28px rgba(0,0,0,.13); }
+[data-theme='dark'] .panel-footer, [data-theme='dark'] .version-tag,
+[data-theme='dark'] .title-row.arena-headline .run-id { background: var(--panel); }
+[data-theme='dark'] .metric, [data-theme='dark'] th, [data-theme='dark'] td { border-color: var(--line) !important; }
+[data-theme='dark'] th, [data-theme='dark'] .decision-scroll thead th,
+[data-theme='dark'] .forecast-review-scroll th { background: var(--surface-2) !important; }
+[data-theme='dark'] .ticker-item { border-color: var(--line); }
+[data-theme='dark'] .ticker-item:hover, [data-theme='dark'] .market-chip:hover { background: var(--surface-2); }
+[data-theme='dark'] .segmented, [data-theme='dark'] .topbar .segmented,
+[data-theme='dark'] .topbar .button { background: var(--panel); }
+[data-theme='dark'] .segmented button.active, [data-theme='dark'] .topbar .segmented button.active { background: var(--primary-soft); color: var(--ink); }
+[data-theme='dark'] .button, [data-theme='dark'] .open-order button { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme='dark'] .button:hover:not(:disabled), [data-theme='dark'] .topbar .button:hover:not(:disabled),
+[data-theme='dark'] .open-order button:hover { background: var(--surface-2); border-color: var(--accent); }
+[data-theme='dark'] .button.primary, [data-theme='dark'] .topbar .button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+[data-theme='dark'] .button.primary:hover:not(:disabled), [data-theme='dark'] .topbar .button.primary:hover:not(:disabled) { background: var(--primary-dark); border-color: var(--primary-dark); }
+[data-theme='dark'] .agent-panel { background: var(--secondary-soft) !important; }
+[data-theme='dark'] .agent-panel .agent-mark { background: var(--panel); }
+[data-theme='dark'] .agent-panel .allocation { border-color: var(--line) !important; }
+[data-theme='dark'] .allocation-ring > span { background: var(--secondary-soft) !important; }
+[data-theme='dark'] .agent-panel .button.full-width { background: var(--surface-2) !important; color: var(--ink) !important; }
+[data-theme='dark'] .metrics-grid.arena-summary > .metric { background: var(--panel) !important; }
+[data-theme='dark'] .metrics-grid.arena-summary > .metric.hero { background: #233c35 !important; }
+[data-theme='dark'] .metrics-grid.arena-summary > .metric.hero.negative { background: var(--red-soft) !important; }
+
+/* Cards, indicators, graphs and notices. */
+[data-theme='dark'] .market-chip { background: var(--panel) !important; }
+[data-theme='dark'] .market-chip.selected { background: var(--primary-soft) !important; }
+[data-theme='dark'] .forecast-card, [data-theme='dark'] .forecast-review-stock,
+[data-theme='dark'] .outlook-card { background: var(--surface-2); }
+[data-theme='dark'] .forecast-card:hover, [data-theme='dark'] .forecast-review-stock:hover { background: #213744; }
+[data-theme='dark'] .risk-track, [data-theme='dark'] .progress-track, [data-theme='dark'] .flow-bar,
+[data-theme='dark'] .fear-gauge, [data-theme='dark'] .pill, [data-theme='dark'] .outcome-badge.flat,
+[data-theme='dark'] .phase, [data-theme='dark'] .forecast-range, [data-theme='dark'] .order-side,
+[data-theme='dark'] .participant-avatar, [data-theme='dark'] .tier-large { background: var(--surface-2); }
+[data-theme='dark'] .pill.positive, [data-theme='dark'] .outcome-badge.positive,
+[data-theme='dark'] .order-side.buy, [data-theme='dark'] .btns button { background: #233c35; color: var(--green); }
+[data-theme='dark'] .pill.negative, [data-theme='dark'] .outcome-badge.negative,
+[data-theme='dark'] .order-side.sell, [data-theme='dark'] .btns .sell { background: var(--red-soft); color: var(--red); }
+[data-theme='dark'] .gridline { stroke: var(--line); }
+[data-theme='dark'] .cash-line { stroke: #8296a0; }
+[data-theme='dark'] .notice { background: var(--surface-2) !important; color: var(--ink); }
+[data-theme='dark'] .notice.negative { background: var(--red-soft) !important; color: var(--red) !important; }
+[data-theme='dark'] .warmup-notice { background: #29271f; border-color: #574b38; color: var(--ink); }
+[data-theme='dark'] .warmup-notice p { color: var(--muted); }
+[data-theme='dark'] .result-banner { background: #233c35; }
+[data-theme='dark'] .result-banner.lost { background: var(--red-soft); }
+
+/* Forms, archived runs and journals. */
+[data-theme='dark'] .experiment-dialog { background: var(--panel) !important; color: var(--ink); box-shadow: 0 30px 90px rgba(0,0,0,.5) !important; }
+[data-theme='dark'] .experiment-dialog::backdrop { background: rgba(0,0,0,.6) !important; }
+[data-theme='dark'] .experiment-dialog input, [data-theme='dark'] .experiment-dialog select,
+[data-theme='dark'] .ticket input, [data-theme='dark'] .history-filter select,
+[data-theme='dark'] .history-dropdowns select, [data-theme='dark'] .decision-dropdowns select,
+[data-theme='dark'] .outlook-stock-heading select { background-color: var(--surface-2); border-color: var(--line); color: var(--ink); }
+[data-theme='dark'] .experiment-dialog select, [data-theme='dark'] .history-filter select,
+[data-theme='dark'] .history-dropdowns select, [data-theme='dark'] .decision-dropdowns select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a4c8df' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E"); }
+[data-theme='dark'] .experiment-dialog select:hover, [data-theme='dark'] .history-filter select:hover,
+[data-theme='dark'] .history-dropdowns select:hover, [data-theme='dark'] .decision-dropdowns select:hover { background-color: #213744; }
+[data-theme='dark'] select option { background: var(--panel); color: var(--ink); }
+[data-theme='dark'] .experiment-dialog .number-control,
+[data-theme='dark'] .experiment-dialog label > input[type='number'],
+[data-theme='dark'] .experiment-dialog label > input[type='text'],
+[data-theme='dark'] .experiment-dialog input[type='file'] { background: var(--surface-2) !important; color: var(--ink) !important; }
+[data-theme='dark'] .experiment-dialog .number-control:hover,
+[data-theme='dark'] .experiment-dialog label > input[type='number']:hover,
+[data-theme='dark'] .experiment-dialog label > input[type='text']:hover,
+[data-theme='dark'] .experiment-dialog input[type='file']:hover { background: #213744 !important; }
+[data-theme='dark'] .experiment-dialog .icon-button, [data-theme='dark'] .experiment-dialog .step { background: var(--primary-soft); color: var(--accent); }
+[data-theme='dark'] .experiment-dialog form > p, [data-theme='dark'] .experiment-dialog .experiment-intro,
+[data-theme='dark'] .experiment-dialog .form-note, [data-theme='dark'] .experiment-dialog .experiment-note { background: var(--surface-2); }
+[data-theme='dark'] .replay-models .panel.signal { background: var(--panel) !important; }
+[data-theme='dark'] .run-card { background: var(--panel); }
+[data-theme='dark'] .history-controls .history-kind-filters button:hover,
+[data-theme='dark'] .decision-action-filters button:hover { background: var(--primary-soft); color: var(--ink); }
+[data-theme='dark'] .history-controls .history-kind-filters button[aria-pressed='true'],
+[data-theme='dark'] .history-controls .history-kind-filters button.active,
+[data-theme='dark'] .decision-action-filters button[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
+
+@media (max-width:640px) {
+  [data-theme='dark'] .topbar { background: rgba(16,26,34,.94) !important; border-bottom-color: var(--line) !important; }
+  [data-theme='dark'] .mobile-run-summary, [data-theme='dark'] .mobile-run-menu { background: var(--panel); }
+  [data-theme='dark'] .mobile-run-menu .button, [data-theme='dark'] .mobile-run-menu button,
+  [data-theme='dark'] .mobile-run-menu .segmented { background: var(--surface-2); color: var(--ink); }
+  [data-theme='dark'] .mobile-run-menu .segmented button.active { background: var(--primary-soft); }
+  [data-theme='dark'] .ticker-item, [data-theme='dark'] .participants-view table tr,
+  [data-theme='dark'] .view-history table tr, [data-theme='dark'] .view-arena table tr,
+  [data-theme='dark'] .arena-lower table tr, [data-theme='dark'] .view-desk .positions tr.data-row { background: var(--panel); }
+  [data-theme='dark'] .participants-view table td, [data-theme='dark'] .view-history table td,
+  [data-theme='dark'] .view-arena table td, [data-theme='dark'] .arena-lower table td,
+  [data-theme='dark'] .view-desk .positions td { border-bottom-color: var(--line) !important; }
+  [data-theme='dark'] .mobile-nav { background: rgba(23,36,46,.97); border-color: var(--line); }
+  [data-theme='dark'] .mobile-nav button { color: var(--muted); }
+  [data-theme='dark'] .mobile-nav button.selected { color: var(--accent) !important; }
+  [data-theme='dark'] .decision-log .decision-scroll { background: var(--bg) !important; }
+}
+
+/* Color change only: preserve layout and interactive animations. */
+:is(html,body,.app-shell,.main-shell,.sidebar,.topbar,.ticker,.ticker-item,.panel,.metric,
+    .metrics-grid,.population-summary,.market-chip,.agent-panel,.button,.segmented,
+    .segmented button,.mobile-nav,.notice,.experiment-dialog,.forecast-card,
+    .forecast-review-stock,.outlook-card,.theme-toggle,th,td,select,input) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 240ms;
+  transition-timing-function: ease;
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(html,body,.app-shell,.main-shell,.sidebar,.topbar,.ticker,.ticker-item,.panel,.metric,
+      .metrics-grid,.population-summary,.market-chip,.agent-panel,.button,.segmented,
+      .segmented button,.mobile-nav,.notice,.experiment-dialog,.forecast-card,
+      .forecast-review-stock,.outlook-card,.theme-toggle,th,td,select,input) { transition-duration: .01ms !important; }
+}

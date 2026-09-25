@@ -14,6 +14,7 @@ import Watchlist from './components/Watchlist';
 import DepthLadder from './components/DepthLadder';
 import Tape from './components/Tape';
 import ReplayView from './components/ReplayView';
+import { readTheme, THEME_KEY, type Theme } from './theme';
 
 const views = [['arena', 'Live arena', 'arena', 'Live'], ['participants', 'Market participants', 'people', 'People'], ['history', 'Run history', 'history', 'History'], ['desk', 'Manual trading desk', 'chart', 'Trade']] as const;
 function Icon({ name }: { name: string }) {
@@ -26,11 +27,25 @@ function Icon({ name }: { name: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;
 }
 
+function ThemeToggle({ theme, onToggle, className }: { theme: Theme; onToggle: () => void; className: string }) {
+  const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  return <button type="button" className={`theme-toggle ${className}`} onClick={onToggle} aria-label={label} title={label} aria-pressed={theme === 'dark'}>
+    <svg className="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.2 15.3A8.5 8.5 0 0 1 8.7 3.8 8.5 8.5 0 1 0 20.2 15.3Z"/></svg>
+    <svg className="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+  </button>;
+}
+
 export default function App() {
   const [view, setView] = useState('arena'), [setup, setSetup] = useState(false);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const { snap, replay, connected, setSnap, setConnected, setPortfolio, select } = useStore();
   const arena = replay?.arena ?? snap?.arena;
+  const [theme, setTheme] = useState<Theme>(readTheme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101a22' : '#f2f6f7');
+    try { localStorage.setItem(THEME_KEY, theme); } catch {}
+  }, [theme]);
   useEffect(() => {
     const disconnect = connectWs(setSnap, setConnected);
     const refresh = () => { if (!useStore.getState().replay) getPortfolio().then(p => { if (!useStore.getState().replay) setPortfolio(p); }).catch(() => {}); };
@@ -53,6 +68,7 @@ export default function App() {
       <div className="nav-label">Navigation</div>
       <nav>{views.map(([id, label, icon]) => <button key={id} onClick={() => setView(id)} aria-label={label} className={view === id ? 'selected' : ''} aria-current={view === id ? 'page' : undefined}><Icon name={icon}/><span>{label}</span>{id === 'arena' && <i className="nav-live"/>}</button>)}</nav>
       <div className="sidebar-experiment"><div className="eyebrow">Current experiment</div><strong>{replay ? 'Historical replay' : snap ? money(snap.arena.settings.capital) : '—'}</strong><p>{replay ? 'Two frozen models' : 'Atlas + buy-and-hold'}<br/>Seed {arena?.settings.seed ?? '—'} · <span className="capitalize">{replay ? 'Daily OHLCV' : snap?.arena.settings.scenario ?? 'balanced'}</span></p><button className="button primary full-width" onClick={() => setSetup(true)}>New experiment</button></div>
+      <div className="sidebar-bottom"><ThemeToggle theme={theme} onToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="rail-theme"/></div>
     </aside>
     <div className={`main-shell view-shell-${view}`}>
       <header className="topbar">
@@ -60,6 +76,7 @@ export default function App() {
         <div className="breadcrumb">Workspace <span>/</span> <strong>{activeView?.[1]}</strong></div>
         <span className={`mobile-status ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? 'LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
         <div className="topbar-controls">
+          <ThemeToggle theme={theme} onToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="mobile-theme"/>
           <div className="desktop-controls">
             <span className={`status-label ${done ? 'finished' : ''}`}><i/>{!connected ? 'OFFLINE' : arena?.status === 'running' ? replay ? 'REPLAY RUNNING' : 'MARKET LIVE' : (arena?.status ?? 'LOADING').toUpperCase()}</span>
             <div className="segmented speed-control" aria-label="Simulation speed">{[1, 5, 20].map(speed => <button key={speed} disabled={busy || !connected} onClick={() => act('speed', speed)} className={arena?.speed === speed ? 'active' : ''} aria-pressed={arena?.speed === speed}>{speed}×</button>)}</div>
